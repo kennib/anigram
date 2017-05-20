@@ -44,6 +44,16 @@ newShape shape =
 newText text =
   Object (Text text) defaultStyle
 
+moveObject object delta =
+  let
+    (Object obj style) = object
+  in
+    Object obj
+      { style
+      | x = style.x + toFloat delta.x
+      , y = style.y + toFloat delta.y
+      }
+
 corners (Object object style) =
   [ { x = style.x, y = style.y }
   , { x = style.x+style.width, y = style.y }

@@ -56,6 +56,7 @@ controls =
   , newControl "Text" Icon.file_text <| CreateObject <| Obj.newText "Add text here"
   ]
 
+
 update msg model =
   case (model.cursor, msg) of
     (DragDropObject dragDrop, DragObject pos) ->
@@ -68,7 +69,7 @@ update msg model =
       case drop dragDrop of
         Just (object, delta) ->
           ( { model
-            | cursor = Selected <| moveObject object delta
+            | cursor = Selected <| Obj.moveObject object delta
             }
           , Cmd.none
           )
@@ -112,16 +113,6 @@ update msg model =
     _ ->
       (model, Cmd.none)
 
-moveObject object delta =
-  let
-    (Object obj style) = object
-  in
-    Object obj
-      { style
-      | x = style.x + toFloat delta.x
-      , y = style.y + toFloat delta.y
-      }
-
 
 view model =
   let
@@ -144,7 +135,7 @@ cursorView config model =
     DragDropObject dragDrop ->
       case drop dragDrop of
         Just (object, delta) ->
-           (Obj.view config) <| moveObject object delta
+           (Obj.view config) <| Obj.moveObject object delta
         Nothing ->
            text ""
     Selected object ->
