@@ -12,7 +12,7 @@ import Svg.Attributes as Attrs exposing (..)
 
 import FontAwesome as Icon
 
-import Anigram.Object as Obj exposing (Object(..), ShapeType(..))
+import Anigram.Object as Obj exposing (Object(..), ObjectType(..), ShapeType(..))
 import Anigram.Controls exposing (..)
 
 
@@ -24,10 +24,12 @@ type alias Model =
 
 type Cursor
   = Select
+  | Selected Object
   | DragDropObject (DragDrop Object)
 
 type Msg
-  = PickupObject Object
+  = SelectObject Object
+  | PickupObject Object
   | DragObject Mouse.Position
   | DropObject Mouse.Position
   | CreateObject Object
@@ -56,17 +58,6 @@ controls =
 
 update msg model =
   case (model.cursor, msg) of
-    (Select, PickupObject object) ->
-      let
-        (Object obj style) = object
-        pos = { x = round style.x, y = round style.y }
-      in
-        ( { model
-          | objects = List.remove object model.objects
-          , cursor = DragDropObject <| pickup object
-          }
-        , Cmd.none
-        )
     (DragDropObject dragDrop, DragObject pos) ->
       ( { model
         | cursor = DragDropObject <| drag dragDrop pos
@@ -77,21 +68,49 @@ update msg model =
       case drop dragDrop of
         Just (object, delta) ->
           ( { model
-            | cursor = Select 
-            , objects = moveObject object delta :: model.objects
+            | cursor = Selected <| moveObject object delta
             }
           , Cmd.none
           )
         _ ->
-          (model, Cmd.none) 
-    (Select, CreateObject object) ->
+          (model, Cmd.none)
+    (DragDropObject _, _) ->
+          (model, Cmd.none)
+    (Selected selection, SelectObject object) ->
+      ( { model
+        | cursor = Selected object
+        , objects = selection :: model.objects
+        }
+      , Cmd.none)
+    (_, SelectObject object) ->
+      ( { model
+        | cursor = Selected object
+        }
+      , Cmd.none)
+    (Selected selection, PickupObject object) ->
+      ( { model
+        | objects =
+          List.remove object model.objects
+          ++ if object /= selection then [selection] else []
+        , cursor = DragDropObject <| pickup object
+        }
+      , Cmd.none
+      )
+    (_, PickupObject object) ->
+      ( { model
+        | objects = List.remove object model.objects
+        , cursor = DragDropObject <| pickup object
+        }
+      , Cmd.none
+      )
+    (_, CreateObject object) ->
       ( { model
         | objects = object :: model.objects
         }
       , Cmd.none
       )
     _ ->
-      (model, Cmd.none) 
+      (model, Cmd.none)
 
 moveObject object delta =
   let
@@ -108,6 +127,7 @@ view model =
   let
     config object =
       { mouseDown = PickupObject object
+      , click = SelectObject object
       , cursor = "move"
       }
   in
@@ -127,12 +147,14 @@ cursorView config model =
            (Obj.view config) <| moveObject object delta
         Nothing ->
            text ""
+    Selected object ->
+      Obj.selectedView config object
     _ ->
-      text "" 
+      text ""
 
 objectView config model =
   g [] <| List.map (Obj.view config) model.objects
- 
+
 
 subscriptions model =
   case model.cursor of

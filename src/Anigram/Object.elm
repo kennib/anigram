@@ -44,14 +44,22 @@ newShape shape =
 newText text =
   Object (Text text) defaultStyle
 
+corners (Object object style) =
+  [ { x = style.x, y = style.y }
+  , { x = style.x+style.width, y = style.y }
+  , { x = style.x+style.width, y = style.y+style.height }
+  , { x = style.x, y = style.y+style.height }
+  ]
+
 view config object =
   case object of
     Object (Shape Circle) style ->
       circle
-        [ cx <| toString style.x
-        , cy <| toString style.y
-        , r <| toString style.width
+        [ cx <| toString (style.x + style.width/2)
+        , cy <| toString (style.y + style.width/2)
+        , r <| toString <| style.width/2
         , onMouseDown (config object).mouseDown
+        , onClick (config object).click
         , Attr.cursor (config object).cursor
         ]
         []
@@ -62,6 +70,7 @@ view config object =
         , width <| toString style.width
         , height <| toString style.height
         , onMouseDown (config object).mouseDown
+        , onClick (config object).click
         , Attr.cursor (config object).cursor
         ]
         []
@@ -84,3 +93,14 @@ view config object =
       text_
         []
         [text <| toString object]
+
+selectedView config object =
+  let
+    corner pos =
+      circle
+        [ cx <| toString pos.x, cy <| toString pos.y, r "5"
+        , fill "white", stroke "black" ] []
+  in
+    g [] <|
+    [ view config object
+    ] ++ List.map corner (corners object)
