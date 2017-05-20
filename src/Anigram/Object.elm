@@ -1,7 +1,10 @@
 module Anigram.Object exposing (..)
 
+import Json.Decode as Json
+
 import Svg exposing (..)
 import Svg.Events exposing (..)
+import Html.Events exposing (onWithOptions)
 import Svg.Attributes as Attr exposing (..)
 
 type Object =
@@ -29,14 +32,17 @@ type alias Position =
   }
 
 defaultStyle =
-  { x = 0
-  , y = 0
+  { x = 50
+  , y = 50
   , width = 100
   , height = 100
   }
 
 newShape shape =
   Object (Shape shape) defaultStyle
+
+newText text =
+  Object (Text text) defaultStyle
 
 view config object =
   case object of
@@ -59,6 +65,21 @@ view config object =
         , Attr.cursor (config object).cursor
         ]
         []
+    Object (Text string) style ->
+      text_
+        [ x <| toString style.x
+        , y <| toString style.y
+        , dy "10"
+        , onWithOptions
+          "mousedown"
+          { stopPropagation = True
+          , preventDefault = True
+          }
+          (Json.succeed (config object).mouseDown)
+        , onClick (config object).click
+        , Attr.cursor (config object).cursor
+        ]
+        [text string]
     object ->
       text_
         []

@@ -51,6 +51,7 @@ model =
 controls =
   [ newControl "Circle" Icon.circle <| CreateObject <| Obj.newShape Circle
   , newControl "Square" Icon.square <| CreateObject <| Obj.newShape Square
+  , newControl "Text" Icon.file_text <| CreateObject <| Obj.newText "Add text here"
   ]
 
 update msg model =
