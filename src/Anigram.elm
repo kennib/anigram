@@ -15,8 +15,12 @@ import Anigram.Object as Obj exposing (Object(..))
 
 type alias Model =
   { objects : List Object
-  , dragDrop : DragDrop
+  , cursor : Cursor
   }
+
+type Cursor
+  = Select
+  | DragDropObject (DragDrop Object)
 
 type Msg
   = PickupObject Object
@@ -37,43 +41,42 @@ model =
   { objects =
     [ Object (Obj.Shape Obj.Circle) Obj.defaultStyle
     ]
-  , dragDrop = DragDrop.empty
+  , cursor = Select
   }
 
 
 update msg model =
-  let
-    dragDrop = model.dragDrop
-  in
-    case msg of
-      PickupObject object ->
-        let
-          (Object obj style) = object
-          pos = { x = round style.x, y = round style.y }
-        in
-          ( { model
-            | objects = List.remove object model.objects
-            , dragDrop = pickup object
-            }
-          , Cmd.none
-          )
-      DragObject pos ->
+  case (model.cursor, msg) of
+    (Select, PickupObject object) ->
+      let
+        (Object obj style) = object
+        pos = { x = round style.x, y = round style.y }
+      in
         ( { model
-          | dragDrop = drag model.dragDrop pos
+          | objects = List.remove object model.objects
+          , cursor = DragDropObject <| pickup object
           }
         , Cmd.none
         )
-      DropObject pos ->
-        case drop model.dragDrop of
-          Just (object, delta) ->
-            ( { model
-              | dragDrop = DragDrop.empty
-              , objects = moveObject object delta :: model.objects
-              }
-            , Cmd.none
-            )
-          _ ->
-            (model, Cmd.none) 
+    (DragDropObject dragDrop, DragObject pos) ->
+      ( { model
+        | cursor = DragDropObject <| drag dragDrop pos
+        }
+      , Cmd.none
+      )
+    (DragDropObject dragDrop, DropObject pos) ->
+      case drop dragDrop of
+        Just (object, delta) ->
+          ( { model
+            | cursor = Select 
+            , objects = moveObject object delta :: model.objects
+            }
+          , Cmd.none
+          )
+        _ ->
+          (model, Cmd.none) 
+    _ ->
+      (model, Cmd.none) 
 
 moveObject object delta =
   let
@@ -92,25 +95,37 @@ view model =
       { mouseDown = PickupObject object
       , cursor = "move"
       }
-
-    objects = 
-      case drop model.dragDrop of
-        Just (object, delta) ->
-           moveObject object delta :: model.objects
-        Nothing ->
-           model.objects
   in
     svg [width "100%", height "100%"]
-      <| List.map (Obj.view config)
-      <| objects
+      [ objectView config model
+      , cursorView config model
+      ]
+
+cursorView config model =
+  case model.cursor of
+    DragDropObject dragDrop ->
+      case drop dragDrop of
+        Just (object, delta) ->
+           (Obj.view config) <| moveObject object delta
+        Nothing ->
+           text ""
+    _ ->
+      text "" 
+
+objectView config model =
+  g [] <| List.map (Obj.view config) model.objects
  
 
 subscriptions model =
-  case draggedItem model.dragDrop of
-    Just object ->
-      Sub.batch
-      [ Mouse.moves DragObject
-      , Mouse.ups DropObject
-      ]
-    Nothing ->
+  case model.cursor of
+    (DragDropObject dragDrop) ->
+      case draggedItem dragDrop of
+        Just object ->
+          Sub.batch
+          [ Mouse.moves DragObject
+          , Mouse.ups DropObject
+          ]
+        Nothing ->
+          Sub.none
+    _ ->
       Sub.none
