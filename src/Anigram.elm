@@ -10,6 +10,7 @@ import Svg exposing (..)
 import Svg.Events exposing (..)
 import Svg.Attributes as Attrs exposing (..)
 
+import Color exposing (Color)
 import FontAwesome as Icon
 
 import Anigram.Object as Obj exposing (Object(..), ObjectType(..), ShapeType(..))
@@ -33,6 +34,8 @@ type Msg
   | DragObject Mouse.Position
   | DropObject Mouse.Position
   | CreateObject Object
+  | Fill Color
+  | ToggleControl
 
 
 main =
@@ -54,6 +57,7 @@ controls =
   [ newControl "Circle" Icon.circle <| CreateObject <| Obj.newShape Circle
   , newControl "Square" Icon.square <| CreateObject <| Obj.newShape Square
   , newControl "Text" Icon.file_text <| CreateObject <| Obj.newText "Add text here"
+  , newColorSelector "Fill" Color.green Icon.dot_circle_o Fill ToggleControl
   ]
 
 
@@ -104,12 +108,28 @@ update msg model =
         }
       , Cmd.none
       )
-    (_, CreateObject object) ->
+    (Selected selection, CreateObject object) ->
       ( { model
-        | objects = object :: model.objects
+        | objects = selection :: model.objects
+        , cursor = Selected object
         }
       , Cmd.none
       )
+    (_, CreateObject object) ->
+      ( { model
+        | cursor = Selected object
+        }
+      , Cmd.none
+      )
+    (Selected (Object object style), Fill color) ->
+      ( { model
+        | cursor = Selected <|
+          Object object
+            { style
+            | fill = color
+            }
+        }
+      , Cmd.none)
     _ ->
       (model, Cmd.none)
 

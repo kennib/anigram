@@ -7,6 +7,9 @@ import Svg.Events exposing (..)
 import Html.Events exposing (onWithOptions)
 import Svg.Attributes as Attr exposing (..)
 
+import Color exposing (Color)
+import ColorMath exposing (colorToHex)
+
 type Object =
   Object ObjectType ObjectStyle
 
@@ -24,6 +27,7 @@ type alias ObjectStyle =
   , y : Float
   , width : Float
   , height : Float
+  , fill : Color
   }
 
 type alias Position =
@@ -36,6 +40,7 @@ defaultStyle =
   , y = 50
   , width = 100
   , height = 100
+  , fill = Color.lightBlue
   }
 
 newShape shape =
@@ -68,6 +73,7 @@ view config object =
         [ cx <| toString (style.x + style.width/2)
         , cy <| toString (style.y + style.width/2)
         , r <| toString <| style.width/2
+        , fill <| "#" ++ colorToHex style.fill
         , onMouseDown (config object).mouseDown
         , onClick (config object).click
         , Attr.cursor (config object).cursor
@@ -79,6 +85,7 @@ view config object =
         , y <| toString style.y
         , width <| toString style.width
         , height <| toString style.height
+        , fill <| "#" ++ colorToHex style.fill
         , onMouseDown (config object).mouseDown
         , onClick (config object).click
         , Attr.cursor (config object).cursor
