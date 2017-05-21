@@ -28,6 +28,7 @@ type alias ObjectStyle =
   , width : Float
   , height : Float
   , fill : Color
+  , stroke : Color
   }
 
 type alias Position =
@@ -41,6 +42,7 @@ defaultStyle =
   , width = 100
   , height = 100
   , fill = Color.lightBlue
+  , stroke = Color.black
   }
 
 newShape shape =
@@ -74,6 +76,7 @@ view config object =
         , cy <| toString (style.y + style.width/2)
         , r <| toString <| style.width/2
         , fill <| "#" ++ colorToHex style.fill
+        , stroke <| "#" ++ colorToHex style.stroke
         , onMouseDown (config object).mouseDown
         , onClick (config object).click
         , Attr.cursor (config object).cursor
@@ -86,6 +89,7 @@ view config object =
         , width <| toString style.width
         , height <| toString style.height
         , fill <| "#" ++ colorToHex style.fill
+        , stroke <| "#" ++ colorToHex style.stroke
         , onMouseDown (config object).mouseDown
         , onClick (config object).click
         , Attr.cursor (config object).cursor

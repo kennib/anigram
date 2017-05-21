@@ -35,6 +35,7 @@ type Msg
   | DropObject Mouse.Position
   | CreateObject Object
   | Fill Color
+  | Stroke Color
   | ToggleControl
 
 
@@ -58,6 +59,7 @@ controls =
   , newControl "Square" Icon.square <| CreateObject <| Obj.newShape Square
   , newControl "Text" Icon.file_text <| CreateObject <| Obj.newText "Add text here"
   , newColorSelector "Fill" Color.green Icon.dot_circle_o Fill ToggleControl
+  , newColorSelector "Stroke" Color.charcoal Icon.circle_o Stroke ToggleControl
   ]
 
 
@@ -127,6 +129,15 @@ update msg model =
           Object object
             { style
             | fill = color
+            }
+        }
+      , Cmd.none)
+    (Selected (Object object style), Stroke color) ->
+      ( { model
+        | cursor = Selected <|
+          Object object
+            { style
+            | stroke = color
             }
         }
       , Cmd.none)
