@@ -20,26 +20,27 @@ type Control msg
     , message : msg
     }
   | ColorSelector
-    { tooltip : String
+    { id : Int
+    , tooltip : String
     , color : Color
     , icon : Color -> Int -> Html msg
     , message : Color -> msg
     , open : Bool
-    , openMessage : msg
     }
 
 type ControlMsg
-  = Fill Color
+  = NewObject Object
+  | Fill Color
   | Stroke Color
-  | NewObject Object
+  | OpenClose Int Bool
 
 controls =
   merge controlsView
     [ addObjectControl "Add a Circle" Icon.circle <| Obj.newShape Circle
     , addObjectControl "Add a Square" Icon.square <| Obj.newShape Square
     , addObjectControl "Add Text" Icon.file_text <| Obj.newText "Add Text here"
-    , colorControl "Fill" Color.green Icon.dot_circle_o Fill
-    , colorControl "Stroke" Color.grey Icon.circle_o Stroke
+    , colorControl 0 "Fill" Color.green Icon.dot_circle_o Fill
+    , colorControl 1 "Stroke" Color.grey Icon.circle_o Stroke
     ]
 
 addObjectControl tooltip icon object =
@@ -49,31 +50,42 @@ addObjectControl tooltip icon object =
   , view = controlView
   }
 
-colorControl tooltip color icon msg =
+colorControl id tooltip color icon msg =
   let
-    model color = newColorSelector tooltip color icon msg
+    model color = newColorSelector id tooltip color icon msg
   in
     { init = (model color, Cmd.none)
-    , update = colorUpdate msg model
+    , update = colorUpdate
     , subscriptions = \_ -> Sub.none
     , view = controlView
     }
 
-colorUpdate ctrlMsg ctrlModel msg model =
-  let
-    update color =
-      if msg == ctrlMsg color then
-        (ctrlModel color, Cmd.none)
-      else
-        (model, Cmd.none)
-  in
-    case msg of
-      Fill color ->
-        update color
-      Stroke color ->
-        update color
-      _ ->
-        (model, Cmd.none)
+colorUpdate msg model =
+  case model of
+    ColorSelector control ->
+      let
+        update color =
+          if msg == control.message color then
+            (ColorSelector { control | color = color }, Cmd.none)
+          else
+            (model, Cmd.none)
+        openClose id state =
+          if id == control.id then
+            (ColorSelector { control | open = state }, Cmd.none)
+          else
+            (model, Cmd.none)
+      in
+        case msg of
+          Fill color ->
+            update color
+          Stroke color ->
+            update color
+          OpenClose id state ->
+            openClose id state
+          _ ->
+            (model, Cmd.none)
+    _ ->
+      (model, Cmd.none)
 
 newControl tooltip icon message =
   Button
@@ -82,13 +94,14 @@ newControl tooltip icon message =
   , message = message
   }
 
-newColorSelector tooltip color icon message =
+newColorSelector id tooltip color icon message =
   ColorSelector
-  { tooltip = tooltip
+  { id = id
+  , tooltip = tooltip
   , color = color
   , icon = icon
   , message = message
-  , open = True
+  , open = False
   }
 
 controlsView controls =
@@ -119,6 +132,7 @@ controlView control =
           ]
         , button
           [ title control.tooltip
+          , onClick (OpenClose control.id <| not control.open)
           ]
           [ Icon.caret_down black 20
           ]

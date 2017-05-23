@@ -52,6 +52,7 @@ controls2Anigram msg =
     Anigram.Controls.Fill color -> Just <| Fill color
     Anigram.Controls.Stroke color -> Just <| Stroke color
     Anigram.Controls.NewObject object -> Just <| CreateObject object
+    _ -> Nothing
 
 anigram2Controls msg =
   Nothing
