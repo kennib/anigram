@@ -10,6 +10,8 @@ import Svg exposing (..)
 import Svg.Events exposing (..)
 import Svg.Attributes as Attrs exposing (..)
 
+import Component exposing (..)
+
 import Color exposing (Color)
 import FontAwesome as Icon
 
@@ -41,26 +43,37 @@ type Msg
 
 main =
   program
+    <| combine view
+       controls2Anigram anigram2Controls
+       controls anigram
+
+controls2Anigram msg =
+  case msg of
+    Anigram.Controls.Fill color -> Just <| Fill color
+    Anigram.Controls.Stroke color -> Just <| Stroke color
+    Anigram.Controls.NewObject object -> Just <| CreateObject object
+
+anigram2Controls msg =
+  Nothing
+
+anigram =
+  let
+    config object =
+      { mouseDown = PickupObject object
+      , click = SelectObject object
+      , cursor = "move"
+      }
+  in
     { init = (model, Cmd.none)
     , update = update
-    , view = view
     , subscriptions = subscriptions
+    , view = anigramView config
     }
-
 
 model =
   { objects = []
   , cursor = Select
-  , controls = controls
   }
-
-controls =
-  [ newControl "Circle" Icon.circle <| CreateObject <| Obj.newShape Circle
-  , newControl "Square" Icon.square <| CreateObject <| Obj.newShape Square
-  , newControl "Text" Icon.file_text <| CreateObject <| Obj.newText "Add text here"
-  , newColorSelector "Fill" Color.green Icon.dot_circle_o Fill ToggleControl
-  , newColorSelector "Stroke" Color.charcoal Icon.circle_o Stroke ToggleControl
-  ]
 
 
 update msg model =
@@ -144,22 +157,17 @@ update msg model =
     _ ->
       (model, Cmd.none)
 
+view controls anigram =
+  div [Attrs.style "height: 100vh"]
+  [ controls
+  , anigram
+  ]
 
-view model =
-  let
-    config object =
-      { mouseDown = PickupObject object
-      , click = SelectObject object
-      , cursor = "move"
-      }
-  in
-    div [Attrs.style "height: 100vh"]
-      [ controlsView config model
-      , svg [width "100%", height "100%"]
-        [ objectView config model
-        , cursorView config model
-        ]
-      ]
+anigramView config model =
+  svg [width "100%", height "100%"]
+    [ objectView config model
+    , cursorView config model
+    ]
 
 cursorView config model =
   case model.cursor of

@@ -4,10 +4,14 @@ import Html exposing (..)
 import Html.Events exposing (..)
 import Html.Attributes exposing (..)
 
+import Component exposing (..)
+
 import Color exposing (..)
 import ColorMath exposing (colorToHex)
 
 import FontAwesome as Icon
+
+import Anigram.Object as Obj exposing (Object(..), ObjectType(..), ShapeType(..))
 
 type Control msg
   = Button
@@ -24,6 +28,53 @@ type Control msg
     , openMessage : msg
     }
 
+type ControlMsg
+  = Fill Color
+  | Stroke Color
+  | NewObject Object
+
+controls =
+  merge controlsView
+    [ addObjectControl "Add a Circle" Icon.circle <| Obj.newShape Circle
+    , addObjectControl "Add a Square" Icon.square <| Obj.newShape Square
+    , addObjectControl "Add Text" Icon.file_text <| Obj.newText "Add Text here"
+    , colorControl "Fill" Color.green Icon.dot_circle_o Fill
+    , colorControl "Stroke" Color.grey Icon.circle_o Stroke
+    ]
+
+addObjectControl tooltip icon object =
+  { init = (newControl tooltip icon <| NewObject object, Cmd.none)
+  , update = \msg model -> (model, Cmd.none)
+  , subscriptions = \_ -> Sub.none
+  , view = controlView
+  }
+
+colorControl tooltip color icon msg =
+  let
+    model color = newColorSelector tooltip color icon msg
+  in
+    { init = (model color, Cmd.none)
+    , update = colorUpdate msg model
+    , subscriptions = \_ -> Sub.none
+    , view = controlView
+    }
+
+colorUpdate ctrlMsg ctrlModel msg model =
+  let
+    update color =
+      if msg == ctrlMsg color then
+        (ctrlModel color, Cmd.none)
+      else
+        (model, Cmd.none)
+  in
+    case msg of
+      Fill color ->
+        update color
+      Stroke color ->
+        update color
+      _ ->
+        (model, Cmd.none)
+
 newControl tooltip icon message =
   Button
   { tooltip = tooltip
@@ -31,24 +82,22 @@ newControl tooltip icon message =
   , message = message
   }
 
-newColorSelector tooltip color icon message openMessage =
+newColorSelector tooltip color icon message =
   ColorSelector
   { tooltip = tooltip
   , color = color
   , icon = icon
   , message = message
   , open = True
-  , openMessage = openMessage
   }
 
-controlsView config model =
+controlsView controls =
   nav
     [ style
       [ ("padding", "5px")
       ]
     ]
-  <| List.map controlView
-  <| model.controls
+    controls
 
 controlView control =
   case control of
@@ -70,7 +119,6 @@ controlView control =
           ]
         , button
           [ title control.tooltip
-          , onClick control.openMessage
           ]
           [ Icon.caret_down black 20
           ]
