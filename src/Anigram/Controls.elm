@@ -110,6 +110,7 @@ controlsView controls =
   nav
     [ style
       [ ("padding", "5px")
+      , ("background-color", "#333")
       ]
     ]
     controls
