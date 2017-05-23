@@ -1,17 +1,31 @@
 module Anigram.Object exposing (..)
 
+import Mouse
+import DragDrop exposing (DragDrop(..))
+
 import Json.Decode as Json
 
 import Svg exposing (..)
 import Svg.Events exposing (..)
-import Html.Events exposing (onWithOptions)
 import Svg.Attributes as Attr exposing (..)
+
+import Component exposing (..)
 
 import Color exposing (Color)
 import ColorMath exposing (colorToHex)
 
-type Object =
-  Object ObjectType ObjectStyle
+type alias Object =
+  { objectType : ObjectType
+  , id : ObjectId
+  , selected : Bool
+  , dragDrop : DragDrop
+  , x : Float
+  , y : Float
+  , width : Float
+  , height : Float
+  , fill : Color
+  , stroke : Color
+  }
 
 type ObjectType
   = Shape ShapeType
@@ -22,22 +36,39 @@ type ShapeType
   = Circle
   | Square
 
-type alias ObjectStyle =
-  { x : Float
-  , y : Float
-  , width : Float
-  , height : Float
-  , fill : Color
-  , stroke : Color
-  }
+type alias ObjectId = Int
 
 type alias Position =
   { x : Float
   , y : Float
   }
 
-defaultStyle =
-  { x = 50
+type ObjectMsg
+  = Create (ObjectId -> Object)
+  | Click ObjectId
+  | PickUp ObjectId
+  | Drag Mouse.Position
+  | Drop Mouse.Position
+  | Fill Color
+  | Stroke Color
+
+objectsComponent : List (Component Object ObjectMsg) -> Component (List Object) ObjectMsg
+objectsComponent objects =
+  merge objectsView objects
+
+object model =
+  { init = (model, Cmd.none)
+  , update = update
+  , subscriptions = subscriptions
+  , view = view
+  }
+
+defaultObject =
+  { objectType = Shape Circle
+  , id = -1
+  , selected = True
+  , dragDrop = Unselected
+  , x = 50
   , y = 50
   , width = 100
   , height = 100
@@ -45,69 +76,135 @@ defaultStyle =
   , stroke = Color.black
   }
 
-newShape shape =
-  Object (Shape shape) defaultStyle
+newShape shape id =
+  { defaultObject
+  | objectType = Shape shape
+  , id = id
+  }
 
-newText text =
-  Object (Text text) defaultStyle
+newText text id =
+  { defaultObject
+  | objectType = Text text
+  , id = id
+  }
+
+update msg object =
+  let
+    select id =
+      if id == object.id then
+        ({ object | selected = True }, Cmd.none)
+      else
+        ({ object | selected = False, dragDrop = Unselected }, Cmd.none)
+
+    pickup id =
+      if id == object.id then
+        ({ object | selected = True, dragDrop = PickedUp }, Cmd.none)
+      else
+        ({ object | selected = False, dragDrop = Unselected }, Cmd.none)
+
+    updateFilter predicate updated =
+      if predicate object then
+        (updated, Cmd.none)
+      else
+        (object, Cmd.none)
+  in
+     case msg of
+        Create _ ->
+          (object, Cmd.none)
+        Click id ->
+          select id
+        PickUp id ->
+          pickup id
+        Drag pos ->
+          updateFilter .selected <| drag object pos
+        Drop pos ->
+          updateFilter .selected <| drop <| drag object pos
+        Fill color ->
+          updateFilter .selected { object | fill = color }
+        Stroke color ->
+          updateFilter .selected { object | stroke = color }
+
+subscriptions object =
+  if DragDrop.isDragged object.dragDrop then
+    Sub.batch
+      [ Mouse.moves Drag
+      , Mouse.ups Drop
+      ]
+  else
+    Sub.none
 
 moveObject object delta =
-  let
-    (Object obj style) = object
-  in
-    Object obj
-      { style
-      | x = style.x + toFloat delta.x
-      , y = style.y + toFloat delta.y
-      }
+  { object
+  | x = object.x + toFloat delta.x
+  , y = object.y + toFloat delta.y
+  }
 
-corners (Object object style) =
-  [ { x = style.x, y = style.y }
-  , { x = style.x+style.width, y = style.y }
-  , { x = style.x+style.width, y = style.y+style.height }
-  , { x = style.x, y = style.y+style.height }
+drag object pos =
+  { object | dragDrop = DragDrop.drag object.dragDrop pos }
+
+drop object =
+  case DragDrop.drop object.dragDrop of
+    Nothing ->
+      object
+    Just delta ->
+      let
+        movedObject = moveObject object delta
+      in
+        { movedObject | dragDrop = Unselected }
+
+corners object =
+  [ { x = object.x, y = object.y }
+  , { x = object.x+object.width, y = object.y }
+  , { x = object.x+object.width, y = object.y+object.height }
+  , { x = object.x, y = object.y+object.height }
   ]
 
-view config object =
-  case object of
-    Object (Shape Circle) style ->
+objectsView objects =
+  g [] objects
+
+view object =
+  if DragDrop.isDragged object.dragDrop then
+    unselectedView <| drop object
+  else if object.selected then
+    selectedView object
+  else
+    unselectedView object
+
+unselectedView object =
+  case object.objectType of
+    Shape Circle ->
       circle
-        [ cx <| toString (style.x + style.width/2)
-        , cy <| toString (style.y + style.width/2)
-        , r <| toString <| style.width/2
-        , fill <| "#" ++ colorToHex style.fill
-        , stroke <| "#" ++ colorToHex style.stroke
-        , onMouseDown (config object).mouseDown
-        , onClick (config object).click
-        , Attr.cursor (config object).cursor
+        [ cx <| toString (object.x + object.width/2)
+        , cy <| toString (object.y + object.width/2)
+        , r <| toString <| object.width/2
+        , fill <| "#" ++ colorToHex object.fill
+        , stroke <| "#" ++ colorToHex object.stroke
+        , onMouseDown (PickUp object.id)
+        , onClick (Click object.id)
+        , Attr.cursor "move"
         ]
         []
-    Object (Shape Square) style ->
+    Shape Square ->
       rect
-        [ x <| toString style.x
-        , y <| toString style.y
-        , width <| toString style.width
-        , height <| toString style.height
-        , fill <| "#" ++ colorToHex style.fill
-        , stroke <| "#" ++ colorToHex style.stroke
-        , onMouseDown (config object).mouseDown
-        , onClick (config object).click
-        , Attr.cursor (config object).cursor
+        [ x <| toString object.x
+        , y <| toString object.y
+        , width <| toString object.width
+        , height <| toString object.height
+        , fill <| "#" ++ colorToHex object.fill
+        , stroke <| "#" ++ colorToHex object.stroke
+        , onMouseDown (PickUp object.id)
+        , onClick (Click object.id)
+        , Attr.cursor "move"
         ]
         []
-    Object (Text string) style ->
+    Text string ->
       text_
-        [ x <| toString style.x
-        , y <| toString style.y
+        [ x <| toString object.x
+        , y <| toString object.y
         , dy "10"
-        , onWithOptions
-          "mousedown"
-          { stopPropagation = True
-          , preventDefault = True
-          }
-          (Json.succeed (config object).mouseDown)
-        , onClick (config object).click
-        , Attr.cursor (config object).cursor
+        , onMouseDown (PickUp object.id)
+        , onClick (Click object.id)
+        , Attr.cursor "move"
         ]
         [text string]
     object ->
@@ -115,7 +212,7 @@ view config object =
         []
         [text <| toString object]
 
-selectedView config object =
+selectedView object =
   let
     corner pos =
       circle
@@ -123,5 +220,5 @@ selectedView config object =
         , fill "white", stroke "black" ] []
   in
     g [] <|
-    [ view config object
+    [ unselectedView object
     ] ++ List.map corner (corners object)

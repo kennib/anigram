@@ -11,7 +11,7 @@ import ColorMath exposing (colorToHex)
 
 import FontAwesome as Icon
 
-import Anigram.Object as Obj exposing (Object(..), ObjectType(..), ShapeType(..))
+import Anigram.Object as Obj exposing (Object, ObjectId, ObjectType(..), ShapeType(..))
 
 type Control msg
   = Button
@@ -29,7 +29,7 @@ type Control msg
     }
 
 type ControlMsg
-  = NewObject Object
+  = NewObject (ObjectId -> Object)
   | Fill Color
   | Stroke Color
   | OpenClose Int Bool
