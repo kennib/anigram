@@ -25,7 +25,8 @@ controls2Anigram msg =
     _ -> Nothing
 
 anigram2Controls msg =
-  Nothing
+  case msg of
+    _ -> Just <| CloseAll
 
 view controls anigram =
   div [Attrs.style "height: 100vh"]

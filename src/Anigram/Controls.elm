@@ -33,6 +33,7 @@ type ControlMsg
   | Fill Color
   | Stroke Color
   | OpenClose Int Bool
+  | CloseAll
 
 controls =
   merge controlsView
@@ -84,6 +85,8 @@ colorUpdate msg model =
             update color
           OpenClose id state ->
             openClose id state
+          CloseAll ->
+            (ColorSelector { control | open = False }, Cmd.none)
           _ ->
             (model, Cmd.none)
     _ ->
