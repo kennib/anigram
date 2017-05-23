@@ -72,6 +72,8 @@ colorUpdate msg model =
         openClose id state =
           if id == control.id then
             (ColorSelector { control | open = state }, Cmd.none)
+          else if state == True then
+            (ColorSelector { control | open = False }, Cmd.none)
           else
             (model, Cmd.none)
       in
@@ -127,17 +129,37 @@ controlView control =
         [ button
           [ title control.tooltip
           , onClick (control.message control.color)
+          , style
+            [ ("margin-right", "0px")
+            ]
           ]
           [ control.icon control.color 20
           ]
         , button
           [ title control.tooltip
           , onClick (OpenClose control.id <| not control.open)
+          , style
+            [ ("margin-left", "0px")
+            , ("padding-left", "0px")
+            , ("padding-right", "0px")
+            ]
           ]
-          [ Icon.caret_down black 20
+          [ if control.open then
+              Icon.caret_up black 20
+            else
+              Icon.caret_down black 20
           ]
         , if control.open then
-            div []
+            span
+              [ style
+                  [ ("position", "absolute")
+                  , ("top", "34px")
+                  , ("width", "320px")
+                  , ("margin-left", "-26px")
+                  , ("padding","5px")
+                  , ("background-color", "#eee")
+                  ]
+              ]
               <| List.map (colorButton control) colors
           else
             text ""
