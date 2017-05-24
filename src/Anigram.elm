@@ -39,7 +39,7 @@ anigram =
   { init = (objectsComponent []).init
   , update = update
   , subscriptions = \model -> (objectsComponent <| List.map object model).subscriptions  model
-  , view = \model -> (objectsComponent <| List.map object model).view model |> anigramView
+  , view = \model -> (objectsComponent <| List.map object model).view model |> anigramView model
   }
 
 update msg model =
@@ -54,10 +54,14 @@ update msg model =
       _ ->
         (newObjects, cmd)
 
-anigramView objects =
-  svg
-    [ width "100%"
-    , height "100%"
-    ]
-    [ objects
+anigramView objects objectsHtml =
+  div
+    [ Attrs.style "height: 100vh" ] <|
+    List.map textEditView objects ++
+    [ svg
+      [ width "100%"
+      , height "100%"
+      ]
+      [ objectsHtml
+      ]
     ]

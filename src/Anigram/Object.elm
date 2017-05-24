@@ -5,6 +5,9 @@ import DragDrop exposing (DragDrop(..))
 
 import Json.Decode as Json
 
+import Html exposing (div, textarea)
+import Html.Attributes exposing (attribute, autofocus)
+import Html.Events exposing (onInput)
 import Svg exposing (..)
 import Svg.Events exposing (..)
 import Svg.Attributes as Attr exposing (..)
@@ -49,6 +52,7 @@ type ObjectMsg
   | PickUp ObjectId
   | Drag Mouse.Position
   | Drop Mouse.Position
+  | EditText String
   | Fill Color
   | Stroke Color
 
@@ -119,6 +123,12 @@ update msg object =
           updateFilter .selected <| drag object pos
         Drop pos ->
           updateFilter .selected <| drop <| drag object pos
+        EditText string ->
+          case object.objectType of
+            Text _ ->
+              updateFilter .selected { object | objectType = Text string }
+            _ ->
+              (object, Cmd.none)
         Fill color ->
           updateFilter .selected { object | fill = color }
         Stroke color ->
@@ -201,16 +211,61 @@ unselectedView object =
       text_
         [ x <| toString object.x
         , y <| toString object.y
-        , dy "10"
+        , dx "2"
+        , dy "12"
+        , fontSize "12"
+        , fontFamily "sans-serif"
         , onMouseDown (PickUp object.id)
         , onClick (Click object.id)
-        , Attr.cursor "move"
+        , Attr.cursor "text"
         ]
         [text string]
     object ->
       text_
         []
         [text <| toString object]
+
+textEditView object =
+  let
+    obj =
+      if DragDrop.isDragged object.dragDrop then
+        drop object
+      else
+        object
+  in
+    case (obj.objectType, obj.selected) of
+      (Text string, True) ->
+        div
+          [ Html.Attributes.style
+            [ ("position", "absolute")
+            , ("left", toString obj.x ++ "px")
+            , ("top", toString (obj.y + 40) ++ "px")
+            , ("width", toString obj.width ++ "px")
+            , ("height", toString obj.height ++ "px")
+            ]
+          , onMouseDown (PickUp obj.id)
+          , Attr.cursor "move"
+          ]
+          [ textarea
+            [ Html.Attributes.style
+              [ ("resize", "none")
+              , ("box-sizing", "border-box")
+              , ("width", "100%")
+              , ("height", "100%")
+              , ("margin-top", "0px")
+              , ("font-size", "12px")
+              , ("font-family", "sans-serif")
+              , ("border", "none")
+              , ("background", "none")
+              ]
+            , autofocus True
+            , onInput EditText
+            ]
+            [ text string
+            ]
+          ]
+      _ ->
+        text ""
 
 selectedView object =
   let
@@ -220,5 +275,9 @@ selectedView object =
         , fill "white", stroke "black" ] []
   in
     g [] <|
-    [ unselectedView object
+    [ case object.objectType of
+        Text _ ->
+          text ""
+        _ ->
+          unselectedView object
     ] ++ List.map corner (corners object)
