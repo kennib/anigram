@@ -17,7 +17,8 @@ type Control msg
   = Button
     { tooltip : String
     , icon : Color -> Int -> Html msg
-    , message : msg
+    , objectId : ObjectId
+    , message : ObjectId -> msg
     }
   | ColorSelector
     { id : Int
@@ -29,7 +30,8 @@ type Control msg
     }
 
 type ControlMsg
-  = NewObject (ObjectId -> Object)
+  = NewObject Object
+  | NextObjectId ObjectId
   | Fill Color
   | Stroke Color
   | OpenClose Int Bool
@@ -45,7 +47,7 @@ controls =
     ]
 
 addObjectControl tooltip icon object =
-  { init = (newControl tooltip icon <| NewObject object, Cmd.none)
+  { init = (newControl tooltip icon <| (\id -> NewObject <| object id), Cmd.none)
   , update = \msg model -> (model, Cmd.none)
   , subscriptions = \_ -> Sub.none
   , view = controlView
@@ -77,8 +79,14 @@ colorUpdate msg model =
             (ColorSelector { control | open = False }, Cmd.none)
           else
             (model, Cmd.none)
+        updateObjectId objectId =
+          case model of
+            Button control -> (Button { control | objectId = objectId }, Cmd.none)
+            _ -> (model, Cmd.none)
       in
         case msg of
+          NextObjectId id ->
+            updateObjectId id
           Fill color ->
             update color
           Stroke color ->
@@ -97,6 +105,7 @@ newControl tooltip icon message =
   { tooltip = tooltip
   , icon = icon
   , message = message
+  , objectId = 0
   }
 
 newColorSelector id tooltip color icon message =
@@ -123,7 +132,7 @@ controlView control =
     Button control ->
       button
         [ title control.tooltip
-        , onClick control.message
+        , onClick <| control.message control.objectId
         ]
         [ control.icon black 20
         ]

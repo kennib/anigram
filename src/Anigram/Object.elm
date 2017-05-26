@@ -12,6 +12,7 @@ import Svg exposing (..)
 import Svg.Events exposing (..)
 import Svg.Attributes as Attr exposing (..)
 
+import Cmd
 import Component exposing (..)
 
 import Color exposing (Color)
@@ -47,7 +48,9 @@ type alias Position =
   }
 
 type ObjectMsg
-  = Create (ObjectId -> Object)
+  = Create Object
+  | NextId ObjectId
+  | Set (List Object)
   | Click ObjectId
   | PickUp ObjectId
   | Drag Mouse.Position
@@ -55,6 +58,40 @@ type ObjectMsg
   | EditText String
   | Fill Color
   | Stroke Color
+
+
+objects : Component (List Object) ObjectMsg
+objects =
+  { init = (objectsComponent []).init
+  , update = updateObjects
+  , subscriptions = \model -> (objectsComponent <| List.map object model).subscriptions  model
+  , view = \model -> (objectsComponent <| List.map object model).view model |> objectDisplayView model
+  }
+
+updateObjects msg model =
+  let
+    (newObjects, cmd) = (objectsComponent <| List.map object model).update msg model
+    unselectObjects = List.map (\object -> { object | selected = False }) newObjects
+  in
+    case msg of
+      Create object ->
+        (unselectObjects ++ [object], Cmd.message <| NextId <| List.length model + 1)
+      Set objects ->
+        (objects, cmd)
+      _ ->
+        (newObjects, cmd)
+
+objectDisplayView objects objectsHtml =
+  div
+    [ Attr.style "height: 100vh; flex-grow: 1;" ] <|
+    List.map textEditView objects ++
+    [ svg
+      [ width "100%"
+      , height "100%"
+      ]
+      [ objectsHtml
+      ]
+    ]
 
 objectsComponent : List (Component Object ObjectMsg) -> Component (List Object) ObjectMsg
 objectsComponent objects =
@@ -113,8 +150,6 @@ update msg object =
         (object, Cmd.none)
   in
      case msg of
-        Create _ ->
-          (object, Cmd.none)
         Click id ->
           select id
         PickUp id ->
@@ -133,6 +168,8 @@ update msg object =
           updateFilter .selected { object | fill = color }
         Stroke color ->
           updateFilter .selected { object | stroke = color }
+        _ ->
+          (object, Cmd.none)
 
 subscriptions object =
   if DragDrop.isDragged object.dragDrop then

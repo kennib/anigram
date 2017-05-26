@@ -1,13 +1,14 @@
 module Anigram exposing (..)
 
+import List.Extra as List
+
 import Html exposing (program, div)
-import Svg exposing (..)
-import Svg.Events exposing (..)
-import Svg.Attributes as Attrs exposing (..)
+import Html.Attributes exposing (style)
 
 import Component exposing (..)
 
 import Anigram.Object as Obj exposing (..)
+import Anigram.Frames as Frame exposing (..)
 import Anigram.Controls as Ctrl exposing (..)
 
 
@@ -19,49 +20,53 @@ main =
 
 controls2Anigram msg =
   case msg of
-    Ctrl.Fill color -> Just <| Obj.Fill color
-    Ctrl.Stroke color -> Just <| Obj.Stroke color
-    Ctrl.NewObject createObject -> Just <| Obj.Create createObject
+    Ctrl.Fill color -> Just <| Left <| Obj.Fill color
+    Ctrl.Stroke color -> Just <| Left <| Obj.Stroke color
+    Ctrl.NewObject createObject -> Just <| Left <| Obj.Create createObject
     _ -> Nothing
 
 anigram2Controls msg =
   case msg of
-    _ -> Just <| CloseAll
+    Left (Obj.NextId id) -> Just <| Ctrl.NextObjectId id
+    _ -> Just <| Ctrl.CloseAll
 
 view controls anigram =
-  div [Attrs.style "height: 100vh"]
+  div
+  [ style
+    [ ("height", "100vh")
+    ]
+  ]
   [ controls
   , anigram
   ]
 
-anigram : Component (List Object) ObjectMsg
+
 anigram =
-  { init = (objectsComponent []).init
-  , update = update
-  , subscriptions = \model -> (objectsComponent <| List.map object model).subscriptions  model
-  , view = \model -> (objectsComponent <| List.map object model).view model |> anigramView model
-  }
+  combine anigramView
+    objects2Frames frames2Objects
+    objects frames
 
-update msg model =
-  let
-    (newObjects, cmd) = (objectsComponent <| List.map object model).update msg model
-    unselectObjects = List.map (\object -> { object | selected = False }) newObjects
-    newId = List.length newObjects
-  in
-    case msg of
-      Create createObject ->
-        (unselectObjects ++ [createObject newId], cmd)
-      _ ->
-        (newObjects, cmd)
+objects2Frames msg =
+  case msg of
+    Obj.Create object -> Just <| Frame.AddObject object
+    Obj.Drop pos -> Just <| Frame.AddChange <| move pos
+    Obj.Fill color -> Just <| Frame.AddChange <| fill color
+    Obj.Stroke color -> Just <| Frame.AddChange <| stroke color
+    _ ->
+      Nothing
 
-anigramView objects objectsHtml =
+frames2Objects msg =
+  case msg of
+    Frame.ChangeObjects objects -> Just <| Obj.Set objects
+    _ ->
+      Nothing
+
+anigramView objects frames =
   div
-    [ Attrs.style "height: 100vh" ] <|
-    List.map textEditView objects ++
-    [ svg
-      [ width "100%"
-      , height "100%"
+    [ style
+      [ ("display", "flex")
       ]
-      [ objectsHtml
-      ]
+    ]
+    [ objects
+    , frames
     ]
