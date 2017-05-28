@@ -50,8 +50,20 @@ update msg model =
       { model | objects = List.updateIf .selected function model.objects }
     applyDragDrop dragDrop object =
       { object | dragDrop = dragDrop }
+    setSelection selected model =
+      { model
+      | objects =
+            List.map (select False >> applyDragDrop Unselected) model.objects
+         |> List.updateIf (\object -> object.id == selected.id) (select True)
+      }
+    select state object =
+      { object | selected = state }
   in
     case msg of
+      AddObject _ ->
+        (mapSelection noInteraction, Cmd.none)
+      SelectObject object ->
+        (setSelection object model, Cmd.none)
       DragDrop dragDrop ->
         (mapSelection (applyDragDrop dragDrop)
         , if DragDrop.isDropped dragDrop then Cmd.message <| Selection <| Move <| DragDrop.delta dragDrop else Cmd.none)
@@ -72,17 +84,17 @@ view objects =
     ]
 
 subscriptions model =
-  Sub.batch
-    <| List.map objectSubscriptions model.objects
-
-objectSubscriptions object =
-  if DragDrop.isDragged object.dragDrop then
-    Sub.batch
-      [ Mouse.moves <| \pos -> DragDrop <| DragDrop.drag object.dragDrop pos
-      , Mouse.ups <| \pos -> DragDrop <| DragDrop.drop <| DragDrop.drag object.dragDrop pos
-      ]
-  else
-    Sub.none
+  let
+    dragDrops = List.map .dragDrop model.objects
+  in
+    case List.find DragDrop.isDragged dragDrops of
+      Just dragDrop ->
+        Sub.batch
+          [ Mouse.moves <| \pos -> DragDrop <| DragDrop.drag dragDrop pos
+          , Mouse.ups <| \pos -> DragDrop <| DragDrop.drop <| DragDrop.drag dragDrop pos
+          ]
+      Nothing ->
+        Sub.none
 
 move object delta =
   { object
@@ -130,9 +142,10 @@ unselectedView object =
         , r <| toString <| object.width//2
         , fill <| "#" ++ colorToHex object.fill
         , stroke <| "#" ++ colorToHex object.stroke
-        , onMouseDown (DragDrop <| PickedUp)
-        , onClick (SelectObject object)
-        , Attr.cursor "move"
+        , if object.selected then
+            onMouseDown (DragDrop <| PickedUp)
+          else
+            onClick <| SelectObject object
         ]
         []
     Shape Square ->
@@ -143,8 +156,10 @@ unselectedView object =
         , height <| toString object.height
         , fill <| "#" ++ colorToHex object.fill
         , stroke <| "#" ++ colorToHex object.stroke
-        , onMouseDown (DragDrop <| PickedUp)
-        , onClick (SelectObject object)
+        , if object.selected then
+            onMouseDown (DragDrop <| PickedUp)
+          else
+            onClick <| SelectObject object
         , Attr.cursor "move"
         ]
         []
@@ -156,8 +171,10 @@ unselectedView object =
         , dy "12"
         , fontSize "12"
         , fontFamily "sans-serif"
-        , onMouseDown (DragDrop <| PickedUp)
-        , onClick (SelectObject object)
+        , if object.selected then
+            onMouseDown (DragDrop <| PickedUp)
+          else
+            onClick <| SelectObject object
         , Attr.cursor "text"
         ]
         [text string]
@@ -184,7 +201,10 @@ textEditView object =
             , ("width", toString obj.width ++ "px")
             , ("height", toString obj.height ++ "px")
             ]
-          , onMouseDown (DragDrop <| PickedUp)
+          , if object.selected then
+              onMouseDown (DragDrop <| PickedUp)
+            else
+              onClick <| SelectObject object
           , Attr.cursor "move"
           ]
           [ textarea

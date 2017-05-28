@@ -65,7 +65,9 @@ addChange id change frame =
 view : Model -> Html Msg
 view model =
   div
-    [ Attr.style "height: 100vh; width: 200px; background-color: #eee; padding: 20px; overflow-y: scroll;"
+    [ Attr.style
+      <| "height: 100vh; width: 200px; background-color: #eee; padding: 20px; overflow-y: scroll;"
+      ++ "-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;"
     ] <|
     [ button
       [ Svg.Events.onClick AddFrame
@@ -119,7 +121,7 @@ applyChanges changes object =
 applyChange : Change -> Object -> Object
 applyChange change object =
   case change of
+    SetText string -> { object | objectType = Text string }
     Move delta -> Objects.move object delta
     Fill color -> { object | fill = color }
     Stroke color -> { object | stroke = color }
-    _ -> object

@@ -68,7 +68,7 @@ update msg model =
   in
     case msg of
       AddObject _ ->
-        (updateObjectIds <| List.length model.objects, Cmd.none)
+        (updateObjectIds <| List.length model.objects + 1, Cmd.none)
       Selection (Fill color) ->
         (setColorOf FillSelector color, Cmd.none)
       Selection (Stroke color) ->

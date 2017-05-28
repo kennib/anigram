@@ -41,8 +41,8 @@ update msg model =
   in
     batchUpdate
       [ Ctrls.update
-      , Frames.update
       , Objects.update
+      , Frames.update
       ]
 
 subscriptions =
