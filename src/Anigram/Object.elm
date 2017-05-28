@@ -1,5 +1,7 @@
 module Anigram.Object exposing (..)
 
+import List.Extra as List
+
 import Mouse
 import DragDrop exposing (DragDrop(..))
 
@@ -13,96 +15,11 @@ import Svg.Events exposing (..)
 import Svg.Attributes as Attr exposing (..)
 
 import Cmd
-import Component exposing (..)
 
 import Color exposing (Color)
 import ColorMath exposing (colorToHex)
 
-type alias Object =
-  { objectType : ObjectType
-  , id : ObjectId
-  , selected : Bool
-  , dragDrop : DragDrop
-  , x : Float
-  , y : Float
-  , width : Float
-  , height : Float
-  , fill : Color
-  , stroke : Color
-  }
-
-type ObjectType
-  = Shape ShapeType
-  | Text String
-  | Arrow Position Position
-
-type ShapeType
-  = Circle
-  | Square
-
-type alias ObjectId = Int
-
-type alias Position =
-  { x : Float
-  , y : Float
-  }
-
-type ObjectMsg
-  = Create Object
-  | NextId ObjectId
-  | Set (List Object)
-  | Click ObjectId
-  | PickUp ObjectId
-  | Drag Mouse.Position
-  | Drop Mouse.Position
-  | EditText String
-  | Fill Color
-  | Stroke Color
-
-
-objects : Component (List Object) ObjectMsg
-objects =
-  { init = (objectsComponent []).init
-  , update = updateObjects
-  , subscriptions = \model -> (objectsComponent <| List.map object model).subscriptions  model
-  , view = \model -> (objectsComponent <| List.map object model).view model |> objectDisplayView model
-  }
-
-updateObjects msg model =
-  let
-    (newObjects, cmd) = (objectsComponent <| List.map object model).update msg model
-    unselectObjects = List.map (\object -> { object | selected = False }) newObjects
-  in
-    case msg of
-      Create object ->
-        (unselectObjects ++ [object], Cmd.message <| NextId <| List.length model + 1)
-      Set objects ->
-        (objects, cmd)
-      _ ->
-        (newObjects, cmd)
-
-objectDisplayView objects objectsHtml =
-  div
-    [ Attr.style "height: 100vh; flex-grow: 1;" ] <|
-    List.map textEditView objects ++
-    [ svg
-      [ width "100%"
-      , height "100%"
-      ]
-      [ objectsHtml
-      ]
-    ]
-
-objectsComponent : List (Component Object ObjectMsg) -> Component (List Object) ObjectMsg
-objectsComponent objects =
-  merge objectsView objects
-
-object model =
-  { init = (model, Cmd.none)
-  , update = update
-  , subscriptions = subscriptions
-  , view = view
-  }
+import Anigram.Common exposing (..)
 
 defaultObject =
   { objectType = Shape Circle
@@ -117,87 +34,71 @@ defaultObject =
   , stroke = Color.black
   }
 
-newShape shape id =
+newShape shape =
   { defaultObject
   | objectType = Shape shape
-  , id = id
   }
 
-newText text id =
+newText text =
   { defaultObject
   | objectType = Text text
-  , id = id
   }
 
-update msg object =
+update msg model =
   let
-    select id =
-      if id == object.id then
-        ({ object | selected = True }, Cmd.none)
-      else
-        ({ object | selected = False, dragDrop = Unselected }, Cmd.none)
-
-    pickup id =
-      if id == object.id then
-        ({ object | selected = True, dragDrop = PickedUp }, Cmd.none)
-      else
-        ({ object | selected = False, dragDrop = Unselected }, Cmd.none)
-
-    updateFilter predicate updated =
-      if predicate object then
-        (updated, Cmd.none)
-      else
-        (object, Cmd.none)
+    mapSelection function =
+      { model | objects = List.updateIf .selected function model.objects }
+    applyDragDrop dragDrop object =
+      { object | dragDrop = dragDrop }
   in
-     case msg of
-        Click id ->
-          select id
-        PickUp id ->
-          pickup id
-        Drag pos ->
-          updateFilter .selected <| drag object pos
-        Drop pos ->
-          updateFilter .selected <| drop <| drag object pos
-        EditText string ->
-          case object.objectType of
-            Text _ ->
-              updateFilter .selected { object | objectType = Text string }
-            _ ->
-              (object, Cmd.none)
-        Fill color ->
-          updateFilter .selected { object | fill = color }
-        Stroke color ->
-          updateFilter .selected { object | stroke = color }
-        _ ->
-          (object, Cmd.none)
+    case msg of
+      DragDrop dragDrop ->
+        (mapSelection (applyDragDrop dragDrop)
+        , if DragDrop.isDropped dragDrop then Cmd.message <| Selection <| Move <| DragDrop.delta dragDrop else Cmd.none)
+      _ ->
+        (model, Cmd.none)
 
-subscriptions object =
+view objects =
+  div
+    [ Attr.style "height: 100vh; flex-grow: 1;" ]
+    [ div
+      []
+      <| List.map textEditView objects
+    , svg
+      [ width "100%"
+      , height "100%"
+      ]
+      <| List.map objectView objects
+    ]
+
+subscriptions model =
+  Sub.batch
+    <| List.map objectSubscriptions model.objects
+
+objectSubscriptions object =
   if DragDrop.isDragged object.dragDrop then
     Sub.batch
-      [ Mouse.moves Drag
-      , Mouse.ups Drop
+      [ Mouse.moves <| \pos -> DragDrop <| DragDrop.drag object.dragDrop pos
+      , Mouse.ups <| \pos -> DragDrop <| DragDrop.drop <| DragDrop.drag object.dragDrop pos
       ]
   else
     Sub.none
 
-moveObject object delta =
+move object delta =
   { object
-  | x = object.x + toFloat delta.x
-  , y = object.y + toFloat delta.y
+  | x = object.x + delta.x
+  , y = object.y + delta.y
   }
 
 drag object pos =
   { object | dragDrop = DragDrop.drag object.dragDrop pos }
 
 drop object =
-  case DragDrop.drop object.dragDrop of
-    Nothing ->
-      object
-    Just delta ->
-      let
-        movedObject = moveObject object delta
-      in
-        { movedObject | dragDrop = Unselected }
+  let
+    delta = DragDrop.delta object.dragDrop
+    movedObject = move object delta
+  in
+    { movedObject | dragDrop = Unselected }
 
 corners object =
   [ { x = object.x, y = object.y }
@@ -206,10 +107,13 @@ corners object =
   , { x = object.x, y = object.y+object.height }
   ]
 
-objectsView objects =
-  g [] objects
+selection =
+  List.filter .selected
 
-view object =
+noInteraction object =
+  { object | selected = False, dragDrop = Unselected }
+
+objectView object =
   if DragDrop.isDragged object.dragDrop then
     unselectedView <| drop object
   else if object.selected then
@@ -221,13 +125,13 @@ unselectedView object =
   case object.objectType of
     Shape Circle ->
       circle
-        [ cx <| toString (object.x + object.width/2)
-        , cy <| toString (object.y + object.width/2)
-        , r <| toString <| object.width/2
+        [ cx <| toString (object.x + object.width//2)
+        , cy <| toString (object.y + object.width//2)
+        , r <| toString <| object.width//2
         , fill <| "#" ++ colorToHex object.fill
         , stroke <| "#" ++ colorToHex object.stroke
-        , onMouseDown (PickUp object.id)
-        , onClick (Click object.id)
+        , onMouseDown (DragDrop <| PickedUp)
+        , onClick (SelectObject object)
         , Attr.cursor "move"
         ]
         []
@@ -239,8 +143,8 @@ unselectedView object =
         , height <| toString object.height
         , fill <| "#" ++ colorToHex object.fill
         , stroke <| "#" ++ colorToHex object.stroke
-        , onMouseDown (PickUp object.id)
-        , onClick (Click object.id)
+        , onMouseDown (DragDrop <| PickedUp)
+        , onClick (SelectObject object)
         , Attr.cursor "move"
         ]
         []
@@ -252,8 +156,8 @@ unselectedView object =
         , dy "12"
         , fontSize "12"
         , fontFamily "sans-serif"
-        , onMouseDown (PickUp object.id)
-        , onClick (Click object.id)
+        , onMouseDown (DragDrop <| PickedUp)
+        , onClick (SelectObject object)
         , Attr.cursor "text"
         ]
         [text string]
@@ -280,7 +184,7 @@ textEditView object =
             , ("width", toString obj.width ++ "px")
             , ("height", toString obj.height ++ "px")
             ]
-          , onMouseDown (PickUp obj.id)
+          , onMouseDown (DragDrop <| PickedUp)
           , Attr.cursor "move"
           ]
           [ textarea
@@ -296,7 +200,7 @@ textEditView object =
               , ("background", "none")
               ]
             , autofocus True
-            , onInput EditText
+            , onInput (Selection << SetText)
             ]
             [ text string
             ]

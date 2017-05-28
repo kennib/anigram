@@ -4,153 +4,138 @@ import Html exposing (..)
 import Html.Events exposing (..)
 import Html.Attributes exposing (..)
 
-import Component exposing (..)
-
 import Color exposing (..)
 import ColorMath exposing (colorToHex)
 
 import FontAwesome as Icon
 
-import Anigram.Object as Obj exposing (Object, ObjectId, ObjectType(..), ShapeType(..))
+import Anigram.Common exposing (..)
+import Anigram.Object as Obj
 
-type Control msg
-  = Button
-    { tooltip : String
-    , icon : Color -> Int -> Html msg
-    , objectId : ObjectId
-    , message : ObjectId -> msg
-    }
-  | ColorSelector
-    { id : Int
-    , tooltip : String
-    , color : Color
-    , icon : Color -> Int -> Html msg
-    , message : Color -> msg
-    , open : Bool
-    }
-
-type ControlMsg
-  = NewObject Object
-  | NextObjectId ObjectId
-  | Fill Color
-  | Stroke Color
-  | OpenClose Int Bool
-  | CloseAll
-
-controls =
-  merge controlsView
-    [ addObjectControl "Add a Circle" Icon.circle <| Obj.newShape Circle
-    , addObjectControl "Add a Square" Icon.square <| Obj.newShape Square
-    , addObjectControl "Add Text" Icon.file_text <| Obj.newText "Add Text here"
-    , colorControl 0 "Fill" Color.green Icon.dot_circle_o Fill
-    , colorControl 1 "Stroke" Color.grey Icon.circle_o Stroke
-    ]
+model =
+  [ addObjectControl "Add a Circle" Icon.circle <| Obj.newShape Circle
+  , addObjectControl "Add a Square" Icon.square <| Obj.newShape Square
+  , addObjectControl "Add Text" Icon.file_text <| Obj.newText "Add Text here"
+  , colorControl 0 "Fill" Color.green FillSelector
+  , colorControl 1 "Stroke" Color.grey StrokeSelector
+  ]
 
 addObjectControl tooltip icon object =
-  { init = (newControl tooltip icon <| (\id -> NewObject <| object id), Cmd.none)
-  , update = \msg model -> (model, Cmd.none)
-  , subscriptions = \_ -> Sub.none
-  , view = controlView
-  }
+  newControl tooltip (icon Color.black 20) object
 
-colorControl id tooltip color icon msg =
+colorControl id tooltip color kind =
+  newColorSelector id tooltip color kind
+
+update msg model =
   let
-    model color = newColorSelector id tooltip color icon msg
+    updateObjectIds objectId =
+      { model | controls = List.map (updateObjectId objectId) model.controls }
+    updateObjectId objectId control =
+      case control of
+        ObjectAdder control ->
+          ObjectAdder { control | objectId = objectId }
+        _ -> control
+
+    setColorOf kind color =
+      { model | controls = List.map (setColor kind color) model.controls }
+    setColor kind color control =
+      case control of
+        ColorSelector selector ->
+          if selector.kind == kind then
+            ColorSelector { selector | color = color }
+          else
+            control
+        _ -> control
+
+    openCloseAt id state =
+      { model | controls = List.map (openClose id state) model.controls }
+    openClose id state control =
+      case control of
+        ColorSelector selector ->
+          if selector.id == id then
+            ColorSelector { selector | open = state }
+          else
+            control
+        _ -> control
+
+    closeAll =
+      { model | controls = List.map close model.controls }
+    close control =
+      case control of
+        ColorSelector selector ->
+          ColorSelector { selector | open = False }
+        _ -> control
   in
-    { init = (model color, Cmd.none)
-    , update = colorUpdate
-    , subscriptions = \_ -> Sub.none
-    , view = controlView
-    }
+    case msg of
+      AddObject _ ->
+        (updateObjectIds <| List.length model.objects, Cmd.none)
+      Selection (Fill color) ->
+        (setColorOf FillSelector color, Cmd.none)
+      Selection (Stroke color) ->
+        (setColorOf StrokeSelector color, Cmd.none)
+      Control (OpenClose id state) ->
+        (openCloseAt id state, Cmd.none)
+      _ ->
+        (closeAll, Cmd.none)
 
-colorUpdate msg model =
-  case model of
-    ColorSelector control ->
-      let
-        update color =
-          if msg == control.message color then
-            (ColorSelector { control | color = color }, Cmd.none)
-          else
-            (model, Cmd.none)
-        openClose id state =
-          if id == control.id then
-            (ColorSelector { control | open = state }, Cmd.none)
-          else if state == True then
-            (ColorSelector { control | open = False }, Cmd.none)
-          else
-            (model, Cmd.none)
-        updateObjectId objectId =
-          case model of
-            Button control -> (Button { control | objectId = objectId }, Cmd.none)
-            _ -> (model, Cmd.none)
-      in
-        case msg of
-          NextObjectId id ->
-            updateObjectId id
-          Fill color ->
-            update color
-          Stroke color ->
-            update color
-          OpenClose id state ->
-            openClose id state
-          CloseAll ->
-            (ColorSelector { control | open = False }, Cmd.none)
-          _ ->
-            (model, Cmd.none)
-    _ ->
-      (model, Cmd.none)
-
-newControl tooltip icon message =
-  Button
+newControl tooltip icon object =
+  ObjectAdder
   { tooltip = tooltip
   , icon = icon
-  , message = message
   , objectId = 0
+  , object = object
   }
 
-newColorSelector id tooltip color icon message =
+newColorSelector id tooltip color kind =
   ColorSelector
   { id = id
+  , kind = kind
   , tooltip = tooltip
   , color = color
-  , icon = icon
-  , message = message
   , open = False
   }
 
-controlsView controls =
+view model =
   nav
     [ style
       [ ("padding", "5px")
       , ("background-color", "#333")
       ]
     ]
-    controls
+    <| List.map controlView model.controls
 
 controlView control =
   case control of
-    Button control ->
-      button
-        [ title control.tooltip
-        , onClick <| control.message control.objectId
-        ]
-        [ control.icon black 20
-        ]
+    ObjectAdder control ->
+      let
+        object = control.object
+      in
+        button
+          [ title control.tooltip
+          , onClick <| AddObject { object | id = control.objectId }
+          ]
+          [ control.icon
+          ]
     ColorSelector control ->
       span
         []
         [ button
           [ title control.tooltip
-          , onClick (control.message control.color)
+          , onClick <|
+            case control.kind of
+              FillSelector -> Selection <| Fill control.color
+              StrokeSelector -> Selection <| Stroke control.color
           , style
             [ ("margin-right", "0px")
             ]
-          ]
-          [ control.icon control.color 20
-          ]
+            ]
+            [ case control.kind of
+              FillSelector -> Icon.dot_circle_o control.color 20
+              StrokeSelector -> Icon.circle_o control.color 20
+            ]
         , button
           [ title control.tooltip
-          , onClick (OpenClose control.id <| not control.open)
+          , onClick (Control <| OpenClose control.id <| not control.open)
           , style
             [ ("margin-left", "0px")
             , ("padding-left", "0px")
@@ -181,7 +166,10 @@ controlView control =
 colorButton control color =
   button
     [ title <| colorToHex color
-    , onClick (control.message color)
+    , onClick <|
+      case control.kind of
+        FillSelector -> Selection <| Fill color
+        StrokeSelector -> Selection <| Stroke color
     ]
     [ Icon.square color 20
     ]

@@ -7,6 +7,7 @@ type DragDrop
   | PickedUp
   | StartDrag Mouse.Position
   | Drag Mouse.Position Mouse.Position
+  | Drop Mouse.Position Mouse.Position
 
 
 empty = Unselected 
@@ -19,13 +20,21 @@ drag dragDrop pos =
     PickedUp -> StartDrag pos
     StartDrag start -> Drag start pos
     Drag start end -> Drag start pos
+    Drop _ _ -> StartDrag pos
 
 drop dragDrop =
   case dragDrop of
-    Unselected -> Nothing
-    PickedUp -> Just { x = 0, y = 0 }
-    StartDrag start -> Just { x = 0, y = 0 }
-    Drag start end -> Just { x = end.x - start.x, y = end.y - start.y }
+    Unselected -> Unselected
+    PickedUp -> Unselected
+    StartDrag start -> Drop start start
+    Drag start end -> Drop start end
+    Drop start end -> Drop start end
+
+delta dragDrop =
+  case dragDrop of
+    Drag start end -> { x = end.x - start.x, y = end.y - start.y }
+    Drop start end -> { x = end.x - start.x, y = end.y - start.y }
+    _ -> { x = 0, y = 0 }
 
 isDragged dragDrop =
   case dragDrop of
@@ -33,3 +42,12 @@ isDragged dragDrop =
     PickedUp -> True
     StartDrag _ -> True
     Drag _ _ -> True
+    Drop _ _ -> False
+
+isDropped dragDrop =
+  case dragDrop of
+    Unselected -> False 
+    PickedUp -> False
+    StartDrag _ -> False
+    Drag _ _ -> False
+    Drop _ _ -> True

@@ -2,71 +2,71 @@ module Anigram exposing (..)
 
 import List.Extra as List
 
-import Html exposing (program, div)
+import Html exposing (Html, program, div)
 import Html.Attributes exposing (style)
 
-import Component exposing (..)
+import Color exposing (Color)
 
-import Anigram.Object as Obj exposing (..)
-import Anigram.Frames as Frame exposing (..)
-import Anigram.Controls as Ctrl exposing (..)
-
+import Anigram.Common exposing (..)
+import Anigram.Object as Objects
+import Anigram.Frames as Frames
+import Anigram.Controls as Ctrls
 
 main =
   program
-    <| combine view
-       controls2Anigram anigram2Controls
-       controls anigram
+    { init = (model, Cmd.none)
+    , update = update
+    , subscriptions = subscriptions
+    , view = view
+    }
 
-controls2Anigram msg =
-  case msg of
-    Ctrl.Fill color -> Just <| Left <| Obj.Fill color
-    Ctrl.Stroke color -> Just <| Left <| Obj.Stroke color
-    Ctrl.NewObject createObject -> Just <| Left <| Obj.Create createObject
-    _ -> Nothing
+model : Model
+model =
+  { objects = []
+  , frames = [ Frames.empty ]
+  , frameIndex = 0
+  , controls = Ctrls.model
+  }
 
-anigram2Controls msg =
-  case msg of
-    Left (Obj.NextId id) -> Just <| Ctrl.NextObjectId id
-    _ -> Just <| Ctrl.CloseAll
+update : Msg -> Model -> (Model, Cmd Msg)
+update msg model =
+  let
+    mergeUpdate nextUpdate (model, cmds) =
+      nextUpdate msg model
+        |> Tuple.mapSecond (\newCmd -> newCmd :: cmds)
 
-view controls anigram =
+    batchUpdate updates =
+      List.foldl mergeUpdate (model, []) updates
+        |> Tuple.mapSecond Cmd.batch
+  in
+    batchUpdate
+      [ Ctrls.update
+      , Frames.update
+      , Objects.update
+      ]
+
+subscriptions =
+  Objects.subscriptions
+
+view : Model -> Html Msg
+view model =
   div
-  [ style
-    [ ("height", "100vh")
+    [ style
+      [ ("height", "100vh")
+      ]
     ]
-  ]
-  [ controls
-  , anigram
-  ]
+    [ Ctrls.view model
+    , anigramView model
+    ]
 
-
-anigram =
-  combine anigramView
-    objects2Frames frames2Objects
-    objects frames
-
-objects2Frames msg =
-  case msg of
-    Obj.Create object -> Just <| Frame.AddObject object
-    Obj.Drop pos -> Just <| Frame.AddChange <| move pos
-    Obj.Fill color -> Just <| Frame.AddChange <| fill color
-    Obj.Stroke color -> Just <| Frame.AddChange <| stroke color
-    _ ->
-      Nothing
-
-frames2Objects msg =
-  case msg of
-    Frame.ChangeObjects objects -> Just <| Obj.Set objects
-    _ ->
-      Nothing
-
-anigramView objects frames =
+anigramView model =
   div
     [ style
       [ ("display", "flex")
       ]
     ]
-    [ objects
-    , frames
+    [ Objects.view
+      <| Maybe.withDefault []
+      <| Frames.getFrameObjects model.frameIndex model.frames model.objects
+    , Frames.view model
     ]
