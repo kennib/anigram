@@ -1,6 +1,6 @@
 module Anigram.Frames exposing (..)
 
-import Dict exposing (..)
+import Dict
 import List.Extra as List
 
 import Html exposing (..)
@@ -12,6 +12,7 @@ import Color exposing (Color)
 
 import Anigram.Common exposing (..)
 import Anigram.Object as Objects
+import Anigram.Change as Change
 
 empty : Frame
 empty = Dict.empty
@@ -46,6 +47,7 @@ addChangeToModel change model =
   { model | frames =
     List.updateAt model.frameIndex (addChanges (selection model.objects) change) model.frames
       |> Maybe.withDefault model.frames
+      |> reduceChanges model.objects
   }
 
 addChanges : List ObjectId -> Change -> Frame -> Frame
@@ -61,6 +63,53 @@ addChange id change frame =
         Nothing -> Just [ change ]
   in
     Dict.update id update frame 
+
+reduceChanges : List Object -> List Frame -> List Frame
+reduceChanges objects frames =
+  let
+    prevFrameObjects = List.scanl applyFrame objects frames
+  in
+    frames
+    |> List.map reduceFrameChanges
+    |> List.map2 removeNonChanges prevFrameObjects
+
+reduceFrameChanges : Frame -> Frame
+reduceFrameChanges frame =
+  let
+    reduceObjectChanges objectId changes =
+      (changes |> List.filterNot Change.isSetText |> List.filterNot Change.isFill |> List.filterNot Change.isStroke)
+      ++ getLastChange Change.isSetText changes
+      ++ getLastChange Change.isFill changes
+      ++ getLastChange Change.isStroke changes
+
+    getLastChange predicate changes =
+      List.reverse changes
+      |> List.filter predicate
+      |> List.take 1
+  in
+    frame
+    |> Dict.map reduceObjectChanges
+
+removeNonChanges : List Object -> Frame -> Frame
+removeNonChanges prevObjects frame =
+  let
+    nonChange prevObject change =
+      applyChange change prevObject == prevObject
+
+    filterNonChanges prevObject changes =
+      List.filter (not << nonChange prevObject) changes
+
+    filterObjectNonChanges prevObject objectId changes =
+      if objectId == prevObject.id then
+        filterNonChanges prevObject changes
+      else
+        changes
+
+    filterFrameNonChanges prevObject frame =
+      frame
+      |> Dict.map (filterObjectNonChanges prevObject)
+  in
+    List.foldl filterFrameNonChanges frame prevObjects
 
 view : Model -> Html Msg
 view model =
