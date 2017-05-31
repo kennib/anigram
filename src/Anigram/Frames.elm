@@ -23,7 +23,13 @@ update msg model =
     Selection action ->
       updateChange action model
     AddFrame ->
-      ( { model | frames = model.frames ++ [ Dict.empty ], frameIndex = List.length model.frames }
+      ( { model
+        | frames =
+             List.take (model.frameIndex+1) model.frames
+          ++ [ Dict.empty ]
+          ++ List.drop (model.frameIndex+1) model.frames
+        , frameIndex = model.frameIndex+1
+        }
       , Cmd.none)
     SelectFrame index ->
       ( { model | frameIndex = index }
