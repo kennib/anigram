@@ -13,6 +13,7 @@ import Html.Events exposing (onInput)
 import Svg exposing (..)
 import Svg.Events exposing (..)
 import Svg.Attributes as Attr exposing (..)
+import Svg.Path exposing (..)
 
 import Cmd
 
@@ -37,6 +38,11 @@ defaultObject =
 newShape shape =
   { defaultObject
   | objectType = Shape shape
+  }
+
+newArrow =
+  { defaultObject
+  | objectType = Arrow
   }
 
 newText text =
@@ -163,6 +169,48 @@ unselectedView object =
         , Attr.cursor "move"
         ]
         []
+    Arrow ->
+      let
+        linePath =
+          subpath
+            (startAt (toFloat <| object.x, toFloat <| object.y)) open
+            [ lineTo (toFloat <| object.x + object.width, toFloat <| object.y + object.height)
+            ]
+        trianglePath = "M0,0 V6 L3,3 Z"
+      in
+        g
+          []
+          [ defs
+            []
+            [ marker
+              [ id "head"
+              , orient "auto"
+              , markerWidth "4"
+              , markerHeight "8"
+              , refX "2.5"
+              , refY "3"
+              ]
+              [ Svg.path
+                [ d <| trianglePath
+                , fill <| "#" ++ colorToHex object.stroke
+                ]
+                []
+              ]
+            ]
+          , Svg.path
+            [ d <| pathToString [linePath]
+            , attribute "marker-end" "url(#head)"
+            , stroke <| "#" ++ colorToHex object.stroke
+            , fill "none"
+            , strokeWidth "3"
+            , if object.selected then
+                onMouseDown (DragDrop <| PickedUp)
+              else
+                onClick <| SelectObject object
+            ]
+            [
+            ]
+          ]
     Text string ->
       text_
         [ x <| toString object.x
@@ -178,10 +226,6 @@ unselectedView object =
         , Attr.cursor "text"
         ]
         [text string]
-    object ->
-      text_
-        []
-        [text <| toString object]
 
 textEditView object =
   let

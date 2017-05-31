@@ -23,7 +23,7 @@ type alias Object =
 type ObjectType
   = Shape ShapeType
   | Text String
-  | Arrow Position Position
+  | Arrow
 
 type ShapeType
   = Circle

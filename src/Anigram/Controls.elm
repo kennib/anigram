@@ -15,6 +15,7 @@ import Anigram.Object as Obj
 model =
   [ addObjectControl "Add a Circle" Icon.circle <| Obj.newShape Circle
   , addObjectControl "Add a Square" Icon.square <| Obj.newShape Square
+  , addObjectControl "Add an Arrow" Icon.long_arrow_right <| Obj.newArrow
   , addObjectControl "Add Text" Icon.file_text <| Obj.newText "Add Text here"
   , colorControl 0 "Fill" Color.green FillSelector
   , colorControl 1 "Stroke" Color.grey StrokeSelector
