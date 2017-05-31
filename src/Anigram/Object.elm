@@ -27,6 +27,7 @@ defaultObject =
   , id = -1
   , selected = True
   , dragDrop = Unselected
+  , dragResize = ((Left, Top), Unselected)
   , x = 50
   , y = 50
   , width = 100
@@ -56,6 +57,8 @@ update msg model =
       { model | objects = List.updateIf .selected function model.objects }
     applyDragDrop dragDrop object =
       { object | dragDrop = dragDrop }
+    applyDragResize corner dragResize object =
+      { object | dragResize = (corner, dragResize), dragDrop = Unselected }
     setSelection selected model =
       { model
       | objects =
@@ -73,6 +76,9 @@ update msg model =
       DragDrop dragDrop ->
         (mapSelection (applyDragDrop dragDrop)
         , if DragDrop.isDropped dragDrop then Cmd.message <| Selection <| Move <| DragDrop.delta dragDrop else Cmd.none)
+      DragResize corner dragDrop ->
+        (mapSelection (applyDragResize corner dragDrop)
+        , if DragDrop.isDropped dragDrop then Cmd.message <| Selection <| Resize corner <| DragDrop.delta dragDrop else Cmd.none)
       _ ->
         (model, Cmd.none)
 
@@ -91,15 +97,25 @@ view objects =
 
 subscriptions model =
   let
-    dragDrops = List.map .dragDrop model.objects
+    dragDrops =
+      List.map .dragDrop model.objects
+      |> List.find DragDrop.isDragged
+    dragResizes =
+      List.map .dragResize model.objects
+      |> List.find (Tuple.second >> DragDrop.isDragged)
   in
-    case List.find DragDrop.isDragged dragDrops of
-      Just dragDrop ->
+    case (dragResizes, dragDrops) of
+      (Just (corner, dragDrop), _) ->
+        Sub.batch
+          [ Mouse.moves <| \pos -> DragResize corner <| DragDrop.drag dragDrop pos
+          , Mouse.ups <| \pos -> DragResize corner <| DragDrop.drop <| DragDrop.drag dragDrop pos
+          ]
+      (_, Just dragDrop) ->
         Sub.batch
           [ Mouse.moves <| \pos -> DragDrop <| DragDrop.drag dragDrop pos
           , Mouse.ups <| \pos -> DragDrop <| DragDrop.drop <| DragDrop.drag dragDrop pos
           ]
-      Nothing ->
+      _ ->
         Sub.none
 
 move object delta =
@@ -107,6 +123,32 @@ move object delta =
   | x = object.x + delta.x
   , y = object.y + delta.y
   }
+
+resize object corner delta =
+  let
+    width =
+      case corner of
+        (Left, _) -> object.width - delta.x
+        (Right, _) -> object.width + delta.x
+    height =
+      case corner of
+        (_, Top) -> object.height - delta.y
+        (_, Bottom) -> object.height + delta.y
+    x =
+      case corner of
+        (Left, _) -> if width < 0 then object.x + delta.x + width else object.x + delta.x
+        (Right, _) -> if width < 0 then object.x + width else object.x
+    y =
+      case corner of
+        (_, Top) -> if height < 0 then object.y + delta.y + height else object.y + delta.y
+        (_, Bottom) -> if height < 0 then object.y + height else object.y
+  in
+    { object
+    | width = abs width
+    , height = abs height
+    , x = x
+    , y = y
+    }
 
 drag object pos =
   { object | dragDrop = DragDrop.drag object.dragDrop pos }
@@ -117,6 +159,26 @@ drop object =
     movedObject = move object delta
   in
     { movedObject | dragDrop = Unselected }
+
+resizeDrop object =
+  let
+    (corner, dragResize) = object.dragResize
+    delta = DragDrop.delta dragResize
+    resizedObject = resize object corner delta
+  in
+    { resizedObject | dragResize = (corner, Unselected) }
+
+applyCurrentChanges object =
+  let
+    ifDragged property function object =
+      if DragDrop.isDragged <| property object then
+        function object
+      else
+        object
+  in
+    object
+      |> ifDragged .dragDrop drop
+      |> ifDragged (.dragResize >> Tuple.second) resizeDrop
 
 corners object =
   [ { x = object.x, y = object.y }
@@ -131,21 +193,23 @@ selection =
 noInteraction object =
   { object | selected = False, dragDrop = Unselected }
 
+
 objectView object =
-  if DragDrop.isDragged object.dragDrop then
-    unselectedView <| drop object
-  else if object.selected then
-    selectedView object
+  if object.selected then
+    object
+    |> applyCurrentChanges
+    |> selectedView
   else
     unselectedView object
 
 unselectedView object =
   case object.objectType of
     Shape Circle ->
-      circle
+      ellipse
         [ cx <| toString (object.x + object.width//2)
-        , cy <| toString (object.y + object.width//2)
-        , r <| toString <| object.width//2
+        , cy <| toString (object.y + object.height//2)
+        , rx <| toString <| object.width//2
+        , ry <| toString <| object.height//2
         , fill <| "#" ++ colorToHex object.fill
         , stroke <| "#" ++ colorToHex object.stroke
         , onClick <| SelectObject object
@@ -217,11 +281,7 @@ unselectedView object =
 
 textEditView object =
   let
-    obj =
-      if DragDrop.isDragged object.dragDrop then
-        drop object
-      else
-        object
+    obj = object |> applyCurrentChanges
   in
     case (obj.objectType, obj.selected) of
       (Text string, True) ->
@@ -262,10 +322,16 @@ textEditView object =
 
 selectedView object =
   let
-    corner pos =
+    cornerSvg corner pos =
       circle
-        [ cx <| toString pos.x, cy <| toString pos.y, r "5"
-        , fill "white", stroke "black" ] []
+        [ cx <| toString pos.x, cy <| toString pos.y, r "6"
+        , fill "white", stroke "black"
+        , onMouseDown (DragResize corner <| PickedUp)
+        ] []
+    cornersSvg =
+      List.map2 cornerSvg
+        [(Left, Top), (Right, Top), (Right, Bottom), (Left, Bottom)]
+        (corners object)
     box =
       rect
         [ x <| toString object.x
@@ -288,4 +354,4 @@ selectedView object =
         _ ->
           unselectedView object
     , box
-    ] ++ List.map corner (corners object)
+    ] ++ cornersSvg

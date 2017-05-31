@@ -12,6 +12,7 @@ type alias Object =
   , id : ObjectId
   , selected : Bool
   , dragDrop : DragDrop.DragDrop
+  , dragResize : (Corner, DragDrop.DragDrop)
   , x : Int 
   , y : Int
   , width : Int
@@ -33,6 +34,10 @@ type alias Position =
   { x : Int
   , y : Int
   }
+
+type alias Corner = (XSide, YSide)
+type XSide = Left | Right
+type YSide = Top | Bottom
 
 type alias ObjectId = Int
 
@@ -74,6 +79,7 @@ type Msg
   = AddObject Object
   | SelectObject Object
   | DragDrop DragDrop.DragDrop
+  | DragResize Corner DragDrop.DragDrop
   | AddFrame
   | SelectFrame Int
   | Selection Change
@@ -82,6 +88,7 @@ type Msg
 type Change
   = SetText String
   | Move Position
+  | Resize Corner Position
   | Fill Color
   | Stroke Color
 

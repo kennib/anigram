@@ -167,5 +167,6 @@ applyChange change object =
   case change of
     SetText string -> { object | objectType = Text string }
     Move delta -> Objects.move object delta
+    Resize corner delta -> Objects.resize object corner delta
     Fill color -> { object | fill = color }
     Stroke color -> { object | stroke = color }
