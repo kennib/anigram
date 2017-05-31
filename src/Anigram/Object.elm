@@ -148,10 +148,7 @@ unselectedView object =
         , r <| toString <| object.width//2
         , fill <| "#" ++ colorToHex object.fill
         , stroke <| "#" ++ colorToHex object.stroke
-        , if object.selected then
-            onMouseDown (DragDrop <| PickedUp)
-          else
-            onClick <| SelectObject object
+        , onClick <| SelectObject object
         ]
         []
     Shape Square ->
@@ -162,11 +159,8 @@ unselectedView object =
         , height <| toString object.height
         , fill <| "#" ++ colorToHex object.fill
         , stroke <| "#" ++ colorToHex object.stroke
-        , if object.selected then
-            onMouseDown (DragDrop <| PickedUp)
-          else
-            onClick <| SelectObject object
         , Attr.cursor "move"
+        , onClick <| SelectObject object
         ]
         []
     Arrow ->
@@ -203,10 +197,7 @@ unselectedView object =
             , stroke <| "#" ++ colorToHex object.stroke
             , fill "none"
             , strokeWidth "3"
-            , if object.selected then
-                onMouseDown (DragDrop <| PickedUp)
-              else
-                onClick <| SelectObject object
+            , onClick <| SelectObject object
             ]
             [
             ]
@@ -219,11 +210,8 @@ unselectedView object =
         , dy "12"
         , fontSize "12"
         , fontFamily "sans-serif"
-        , if object.selected then
-            onMouseDown (DragDrop <| PickedUp)
-          else
-            onClick <| SelectObject object
         , Attr.cursor "text"
+        , onClick <| SelectObject object
         ]
         [text string]
 
@@ -278,11 +266,26 @@ selectedView object =
       circle
         [ cx <| toString pos.x, cy <| toString pos.y, r "5"
         , fill "white", stroke "black" ] []
+    box =
+      rect
+        [ x <| toString object.x
+        , y <| toString object.y
+        , width <| toString object.width
+        , height <| toString object.height
+        , fill <| "#88008800"
+        ]
+        []
   in
-    g [] <|
+    g
+    [ if object.selected then
+        onMouseDown (DragDrop <| PickedUp)
+      else
+        onClick <| SelectObject object
+    ] <|
     [ case object.objectType of
         Text _ ->
           text ""
         _ ->
           unselectedView object
+    , box
     ] ++ List.map corner (corners object)
