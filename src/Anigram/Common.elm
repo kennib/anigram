@@ -40,7 +40,12 @@ type alias Frame =
   Dict ObjectId (List Change)
 
 type Control msg
-  = ObjectAdder
+  = Button
+    { tooltip : String
+    , icon : Html msg
+    , message : msg
+    }
+  | ObjectAdder
     { tooltip : String
     , icon : Html msg
     , objectId : ObjectId

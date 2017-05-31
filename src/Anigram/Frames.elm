@@ -118,12 +118,7 @@ view model =
       <| "height: 100vh; width: 200px; background-color: #eee; padding: 20px; overflow-y: scroll;"
       ++ "-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;"
     ] <|
-    [ button
-      [ Svg.Events.onClick AddFrame
-      ]
-      [ Svg.text "Add Frame"
-      ]
-    , div
+    [ div
       []
       <| List.indexedMap (viewFrame model)
       <| applyFrames model.frames model.objects

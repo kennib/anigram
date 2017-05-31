@@ -18,13 +18,41 @@ model =
   , addObjectControl "Add Text" Icon.file_text <| Obj.newText "Add Text here"
   , colorControl 0 "Fill" Color.green FillSelector
   , colorControl 1 "Stroke" Color.grey StrokeSelector
+  , buttonControl "Add Frame" Icon.plus_square AddFrame
   ]
 
+buttonControl tooltip icon message =
+  newButton tooltip (icon Color.black 20) message
+
 addObjectControl tooltip icon object =
-  newControl tooltip (icon Color.black 20) object
+  newObjectAdder tooltip (icon Color.black 20) object
 
 colorControl id tooltip color kind =
   newColorSelector id tooltip color kind
+
+newButton tooltip icon message =
+  Button
+  { tooltip = tooltip
+  , icon = icon
+  , message = message
+  }
+
+newObjectAdder tooltip icon object =
+  ObjectAdder
+  { tooltip = tooltip
+  , icon = icon
+  , objectId = 0
+  , object = object
+  }
+
+newColorSelector id tooltip color kind =
+  ColorSelector
+  { id = id
+  , kind = kind
+  , tooltip = tooltip
+  , color = color
+  , open = False
+  }
 
 update msg model =
   let
@@ -78,23 +106,6 @@ update msg model =
       _ ->
         (closeAll, Cmd.none)
 
-newControl tooltip icon object =
-  ObjectAdder
-  { tooltip = tooltip
-  , icon = icon
-  , objectId = 0
-  , object = object
-  }
-
-newColorSelector id tooltip color kind =
-  ColorSelector
-  { id = id
-  , kind = kind
-  , tooltip = tooltip
-  , color = color
-  , open = False
-  }
-
 view model =
   nav
     [ style
@@ -106,6 +117,13 @@ view model =
 
 controlView control =
   case control of
+    Button control ->
+      button
+        [ title control.tooltip
+        , onClick control.message 
+        ]
+        [ control.icon
+        ]
     ObjectAdder control ->
       let
         object = control.object
