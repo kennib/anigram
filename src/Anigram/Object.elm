@@ -65,6 +65,8 @@ update msg model =
             List.map (select False >> applyDragDrop Unselected) model.objects
          |> List.updateIf (\object -> object.id == selected.id) (select True)
       }
+    unselectAll model =
+      { model | objects = List.map (select False) model.objects }
     select state object =
       { object | selected = state }
   in
@@ -73,6 +75,8 @@ update msg model =
         (mapSelection noInteraction, Cmd.none)
       SelectObject object ->
         (setSelection object model, Cmd.none)
+      DeselectAll ->
+        (unselectAll model, Cmd.none)
       DragDrop dragDrop ->
         (mapSelection (applyDragDrop dragDrop)
         , if DragDrop.isDropped dragDrop then Cmd.message <| Selection <| Move <| DragDrop.delta dragDrop else Cmd.none)
@@ -91,8 +95,17 @@ view objects =
     , svg
       [ width "100%"
       , height "100%"
+      ] <|
+      [ rect
+        [ onClick DeselectAll
+        , fill "#00000000"
+        , width "10000"
+        , height "10000"
+        , stroke "none"
+        ]
+        []
       ]
-      <| List.map objectView objects
+      ++ List.map objectView objects
     ]
 
 subscriptions model =

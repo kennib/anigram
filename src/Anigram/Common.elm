@@ -78,6 +78,7 @@ type alias Model =
 type Msg
   = AddObject Object
   | SelectObject Object
+  | DeselectAll
   | DragDrop DragDrop.DragDrop
   | DragResize Corner DragDrop.DragDrop
   | AddFrame
