@@ -63,7 +63,7 @@ update msg model =
       { model
       | objects =
             List.map (select False >> applyDragDrop Unselected) model.objects
-         |> List.updateIf (\object -> object.id == selected.id) (select True)
+         |> List.updateIf (\object -> object.id == selected.id) (select True >> applyDragDrop PickedUp)
       }
     unselectAll model =
       { model | objects = List.map (select False) model.objects }
@@ -225,7 +225,7 @@ unselectedView object =
         , ry <| toString <| object.height//2
         , fill <| "#" ++ colorToHex object.fill
         , stroke <| "#" ++ colorToHex object.stroke
-        , onClick <| SelectObject object
+        , onMouseDown <| SelectObject object
         ]
         []
     Shape Square ->
@@ -237,7 +237,7 @@ unselectedView object =
         , fill <| "#" ++ colorToHex object.fill
         , stroke <| "#" ++ colorToHex object.stroke
         , Attr.cursor "move"
-        , onClick <| SelectObject object
+        , onMouseDown <| SelectObject object
         ]
         []
     Arrow ->
@@ -274,7 +274,7 @@ unselectedView object =
             , stroke <| "#" ++ colorToHex object.stroke
             , fill "none"
             , strokeWidth "3"
-            , onClick <| SelectObject object
+            , onMouseDown <| SelectObject object
             ]
             [
             ]
