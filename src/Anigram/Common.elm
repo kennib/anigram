@@ -75,6 +75,11 @@ type alias Model =
   , controls : List (Control Msg)
   }
 
+type alias Anigram =
+  { objects : List Object
+  , frames : List Frame
+  }
+
 type Msg
   = AddObject Object
   | SelectObject Object
@@ -84,6 +89,10 @@ type Msg
   | DragResize Corner DragDrop.DragDrop
   | AddFrame
   | SelectFrame Int
+  | SaveAnigram
+  | AnigramSaved
+  | LoadAnigram
+  | AnigramLoaded Anigram
   | Selection Change
   | Control ControlMsg
 

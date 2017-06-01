@@ -26,7 +26,7 @@ import Anigram.Common exposing (..)
 defaultObject =
   { objectType = Shape Circle
   , id = -1
-  , selected = True
+  , selected = False
   , dragDrop = Unselected
   , dragResize = ((Left, Top), Unselected)
   , x = 50
@@ -167,6 +167,9 @@ resize object corner delta =
     , x = x
     , y = y
     }
+
+select object =
+  { object | selected = True }
 
 drag object pos =
   { object | dragDrop = DragDrop.drag object.dragDrop pos }

@@ -11,15 +11,18 @@ import FontAwesome as Icon
 
 import Anigram.Common exposing (..)
 import Anigram.Object as Obj
+import Anigram.Store as Store
 
 model =
-  [ addObjectControl "Add a Circle" Icon.circle <| Obj.newShape Circle
-  , addObjectControl "Add a Square" Icon.square <| Obj.newShape Square
-  , addObjectControl "Add an Arrow" Icon.long_arrow_right <| Obj.newArrow
-  , addObjectControl "Add Text" Icon.file_text <| Obj.newText "Add Text here"
+  [ addObjectControl "Add a Circle" Icon.circle <| Obj.select <| Obj.newShape Circle
+  , addObjectControl "Add a Square" Icon.square <| Obj.select <| Obj.newShape Square
+  , addObjectControl "Add an Arrow" Icon.long_arrow_right <| Obj.select <| Obj.newArrow
+  , addObjectControl "Add Text" Icon.file_text <| Obj.select <| Obj.newText "Add Text here"
   , colorControl 0 "Fill" Color.green FillSelector
   , colorControl 1 "Stroke" Color.grey StrokeSelector
   , buttonControl "Add Frame" Icon.plus_square AddFrame
+  , buttonControl "Save" Icon.cloud_upload SaveAnigram
+  , buttonControl "Load" Icon.cloud_download LoadAnigram
   ]
 
 buttonControl tooltip icon message =
@@ -65,6 +68,9 @@ update msg model =
           ObjectAdder { control | objectId = objectId }
         _ -> control
 
+    setAnigram anigram model =
+      { model | objects = anigram.objects, frames = anigram.frames }
+
     setColorOf kind color =
       { model | controls = List.map (setColor kind color) model.controls }
     setColor kind color control =
@@ -98,6 +104,12 @@ update msg model =
     case msg of
       AddObject _ ->
         (updateObjectIds <| List.length model.objects + 1, Cmd.none)
+      SaveAnigram ->
+        (model, Store.saveAnigram { objects = model.objects, frames = model.frames })
+      LoadAnigram ->
+        (model, Store.loadAnigram)
+      AnigramLoaded anigram ->
+        (setAnigram anigram model, Cmd.none)
       DeselectAll ->
         (closeAll, Cmd.none)
       Selection (Fill color) ->
