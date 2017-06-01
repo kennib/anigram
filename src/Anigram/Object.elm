@@ -10,6 +10,7 @@ import Json.Decode as Json
 import Html exposing (div, textarea)
 import Html.Attributes exposing (attribute, autofocus)
 import Html.Events exposing (onInput)
+import Html.Events.Extra exposing (onShiftMouseDown)
 import Svg exposing (..)
 import Svg.Events exposing (..)
 import Svg.Attributes as Attr exposing (..)
@@ -65,6 +66,8 @@ update msg model =
             List.map (select False >> applyDragDrop Unselected) model.objects
          |> List.updateIf (\object -> object.id == selected.id) (select True >> applyDragDrop PickedUp)
       }
+    addSelection selected model =
+      { model | objects = List.updateIf (\object -> object.id == selected.id) (select True >> applyDragDrop PickedUp) model.objects }
     unselectAll model =
       { model | objects = List.map (select False) model.objects }
     select state object =
@@ -75,6 +78,8 @@ update msg model =
         (mapSelection noInteraction, Cmd.none)
       SelectObject object ->
         (setSelection object model, Cmd.none)
+      SelectAddObject object ->
+        (addSelection object model, Cmd.none)
       DeselectAll ->
         (unselectAll model, Cmd.none)
       DragDrop dragDrop ->
@@ -206,6 +211,11 @@ selection =
 noInteraction object =
   { object | selected = False, dragDrop = Unselected }
 
+selectClick object shiftClick =
+  if shiftClick then
+    SelectAddObject object
+  else
+    SelectObject object
 
 objectView object =
   if object.selected then
@@ -225,7 +235,7 @@ unselectedView object =
         , ry <| toString <| object.height//2
         , fill <| "#" ++ colorToHex object.fill
         , stroke <| "#" ++ colorToHex object.stroke
-        , onMouseDown <| SelectObject object
+        , onShiftMouseDown <| selectClick object
         ]
         []
     Shape Square ->
@@ -237,7 +247,7 @@ unselectedView object =
         , fill <| "#" ++ colorToHex object.fill
         , stroke <| "#" ++ colorToHex object.stroke
         , Attr.cursor "move"
-        , onMouseDown <| SelectObject object
+        , onShiftMouseDown <| selectClick object
         ]
         []
     Arrow ->
@@ -274,7 +284,7 @@ unselectedView object =
             , stroke <| "#" ++ colorToHex object.stroke
             , fill "none"
             , strokeWidth "3"
-            , onMouseDown <| SelectObject object
+            , onShiftMouseDown <| selectClick object
             ]
             [
             ]
@@ -288,7 +298,7 @@ unselectedView object =
         , fontSize "12"
         , fontFamily "sans-serif"
         , Attr.cursor "text"
-        , onClick <| SelectObject object
+        , onShiftMouseDown <| selectClick object
         ]
         [text string]
 
