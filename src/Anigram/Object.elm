@@ -199,11 +199,21 @@ applyCurrentChanges object =
       |> ifDragged (.dragResize >> Tuple.second) resizeDrop
 
 corners object =
-  [ { x = object.x, y = object.y }
-  , { x = object.x+object.width, y = object.y }
-  , { x = object.x+object.width, y = object.y+object.height }
-  , { x = object.x, y = object.y+object.height }
-  ]
+  case object.objectType of
+    Arrow ->
+      List.map2 (,)
+        [(Left, Top), (Right, Bottom)]
+        [ { x = object.x, y = object.y }
+        , { x = object.x+object.width, y = object.y+object.height }
+        ]
+    _ ->
+      List.map2 (,)
+        [(Left, Top), (Right, Top), (Right, Bottom), (Left, Bottom)]
+        [ { x = object.x, y = object.y }
+        , { x = object.x+object.width, y = object.y }
+        , { x = object.x+object.width, y = object.y+object.height }
+        , { x = object.x, y = object.y+object.height }
+        ]
 
 selection =
   List.filter .selected
@@ -362,9 +372,7 @@ selectedView object =
         , onMouseDown (DragResize corner <| PickedUp)
         ] []
     cornersSvg =
-      List.map2 cornerSvg
-        [(Left, Top), (Right, Top), (Right, Bottom), (Left, Bottom)]
-        (corners object)
+      List.map (\(corner, pos) -> cornerSvg corner pos) (corners object)
     box =
       rect
         [ x <| toString object.x
