@@ -154,16 +154,16 @@ resize object corner delta =
         (_, Bottom) -> object.height + delta.y
     x =
       case corner of
-        (Left, _) -> if width < 0 then object.x + delta.x + width else object.x + delta.x
-        (Right, _) -> if width < 0 then object.x + width else object.x
+        (Left, _) -> object.x + delta.x
+        (Right, _) -> object.x
     y =
       case corner of
-        (_, Top) -> if height < 0 then object.y + delta.y + height else object.y + delta.y
-        (_, Bottom) -> if height < 0 then object.y + height else object.y
+        (_, Top) -> object.y + delta.y
+        (_, Bottom) -> object.y
   in
     { object
-    | width = abs width
-    , height = abs height
+    | width = width
+    , height = height
     , x = x
     , y = y
     }
@@ -217,6 +217,12 @@ selectClick object shiftClick =
   else
     SelectObject object
 
+flip object =
+  transform <|
+    (if object.width < 0 then "scale(-1 1) translate("++toString (-2*object.x)++" 0)" else "")
+    ++
+    (if object.height < 0 then "scale(1 -1) translate(0 "++toString (-2*object.y)++")" else "")
+
 objectView object =
   if object.selected then
     object
@@ -231,8 +237,9 @@ unselectedView object =
       ellipse
         [ cx <| toString (object.x + object.width//2)
         , cy <| toString (object.y + object.height//2)
-        , rx <| toString <| object.width//2
-        , ry <| toString <| object.height//2
+        , rx <| toString <| abs <| object.width//2
+        , ry <| toString <| abs <| object.height//2
+        , flip object
         , fill <| "#" ++ colorToHex object.fill
         , stroke <| "#" ++ colorToHex object.stroke
         , onShiftMouseDown <| selectClick object
@@ -242,8 +249,9 @@ unselectedView object =
       rect
         [ x <| toString object.x
         , y <| toString object.y
-        , width <| toString object.width
-        , height <| toString object.height
+        , width <| toString <| abs object.width
+        , height <| toString <| abs object.height
+        , flip object
         , fill <| "#" ++ colorToHex object.fill
         , stroke <| "#" ++ colorToHex object.stroke
         , Attr.cursor "move"
@@ -255,7 +263,7 @@ unselectedView object =
         linePath =
           subpath
             (startAt (toFloat <| object.x, toFloat <| object.y)) open
-            [ lineTo (toFloat <| object.x + object.width, toFloat <| object.y + object.height)
+            [ lineTo (toFloat <| object.x + abs object.width, toFloat <| object.y + abs object.height)
             ]
         trianglePath = "M0,0 V6 L3,3 Z"
       in
@@ -280,6 +288,7 @@ unselectedView object =
             ]
           , Svg.path
             [ d <| pathToString [linePath]
+            , flip object
             , attribute "marker-end" "url(#head)"
             , stroke <| "#" ++ colorToHex object.stroke
             , fill "none"
@@ -295,6 +304,7 @@ unselectedView object =
         , y <| toString object.y
         , dx "2"
         , dy "12"
+        , flip object
         , fontSize "12"
         , fontFamily "sans-serif"
         , Attr.cursor "text"
@@ -313,8 +323,8 @@ textEditView object =
             [ ("position", "absolute")
             , ("left", toString obj.x ++ "px")
             , ("top", toString (obj.y + 40) ++ "px")
-            , ("width", toString obj.width ++ "px")
-            , ("height", toString obj.height ++ "px")
+            , ("width", toString (abs obj.width) ++ "px")
+            , ("height", toString (abs obj.height) ++ "px")
             ]
           , if object.selected then
               onMouseDown (DragDrop <| PickedUp)
@@ -359,8 +369,9 @@ selectedView object =
       rect
         [ x <| toString object.x
         , y <| toString object.y
-        , width <| toString object.width
-        , height <| toString object.height
+        , width <| toString <| abs object.width
+        , height <| toString <| abs object.height
+        , flip object
         , fill <| "#88008800"
         ]
         []
