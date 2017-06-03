@@ -412,6 +412,11 @@ selectedView object =
           if not object.hidden then
             unselectedView object
           else
-            text ""
+            faded <| unselectedView object
     , box
     ] ++ cornersSvg
+
+faded svg =
+  g
+    [ opacity "0.2" ]
+    [ svg ]
