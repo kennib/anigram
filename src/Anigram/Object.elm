@@ -296,7 +296,7 @@ unselectedView object =
           [ defs
             []
             [ marker
-              [ id "head"
+              [ id <| "head-"++toString object.id
               , orient "auto"
               , markerWidth "4"
               , markerHeight "8"
@@ -313,7 +313,7 @@ unselectedView object =
           , Svg.path
             [ d <| pathToString [linePath]
             , flip object
-            , attribute "marker-end" "url(#head)"
+            , attribute "marker-end" <| "url(#head-"++toString object.id++")"
             , stroke <| "#" ++ colorToHex object.stroke
             , fill "none"
             , strokeWidth "3"
