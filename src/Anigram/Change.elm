@@ -2,6 +2,12 @@ module Anigram.Change exposing (..)
 
 import Anigram.Common exposing (..)
 
+isChangeType : Change -> Bool
+isChangeType change =
+  case change of
+    ChangeType _ -> True
+    _ -> False
+
 isHide : Change -> Bool
 isHide change =
   case change of

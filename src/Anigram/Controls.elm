@@ -11,13 +11,14 @@ import FontAwesome as Icon
 
 import Anigram.Common exposing (..)
 import Anigram.Object as Obj
+import Anigram.Frames as Frames
 import Anigram.Store as Store
 
 model =
-  [ addObjectControl "Add a Circle" Icon.circle <| Obj.select <| Obj.newShape Circle
-  , addObjectControl "Add a Square" Icon.square <| Obj.select <| Obj.newShape Square
-  , addObjectControl "Add an Arrow" Icon.long_arrow_right <| Obj.select <| Obj.newArrow
-  , addObjectControl "Add Text" Icon.file_text <| Obj.select <| Obj.newText "Add Text here"
+  [ addObjectControl "Add a Circle" Icon.circle <| Shape Circle
+  , addObjectControl "Add a Square" Icon.square <| Shape Square
+  , addObjectControl "Add an Arrow" Icon.long_arrow_right <| Arrow
+  , addObjectControl "Add Text" Icon.file_text <| Text "Add Text here"
   , buttonControl "Show" Icon.eye <| Selection <| Hide False 
   , buttonControl "Hide" Icon.eye_slash <| Selection <| Hide True
   , colorControl 0 "Fill" Color.green FillSelector
@@ -47,7 +48,6 @@ newObjectAdder tooltip icon object =
   ObjectAdder
   { tooltip = tooltip
   , icon = icon
-  , objectId = 0
   , object = object
   }
 
@@ -62,16 +62,8 @@ newColorSelector id tooltip color kind =
 
 update msg model =
   let
-    updateObjectIds objectId =
-      { model | controls = List.map (updateObjectId objectId) model.controls }
-    updateObjectId objectId control =
-      case control of
-        ObjectAdder control ->
-          ObjectAdder { control | objectId = objectId }
-        _ -> control
-
     setAnigram anigram model =
-      { model | objects = anigram.objects, frames = anigram.frames }
+      { model | objects = Frames.objectIds anigram.frames |> List.map Obj.newState, frames = anigram.frames }
 
     setColorOf kind color =
       { model | controls = List.map (setColor kind color) model.controls }
@@ -104,10 +96,8 @@ update msg model =
         _ -> control
   in
     case msg of
-      AddObject _ ->
-        (updateObjectIds <| List.length model.objects + 1, Cmd.none)
       SaveAnigram ->
-        (model, Store.saveAnigram { objects = model.objects, frames = model.frames })
+        (model, Store.saveAnigram { frames = model.frames })
       LoadAnigram ->
         (model, Store.loadAnigram)
       AnigramLoaded anigram ->
@@ -142,15 +132,12 @@ controlView control =
         [ control.icon
         ]
     ObjectAdder control ->
-      let
-        object = control.object
-      in
-        button
-          [ title control.tooltip
-          , onClick <| AddObject { object | id = control.objectId }
-          ]
-          [ control.icon
-          ]
+      button
+        [ title control.tooltip
+        , onClick <| AddObject control.object
+        ]
+        [ control.icon
+        ]
     ColorSelector control ->
       span
         []

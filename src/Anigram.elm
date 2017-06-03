@@ -59,6 +59,7 @@ view model =
     , anigramView model
     ]
 
+anigramView : Model -> Html Msg
 anigramView model =
   div
     [ style

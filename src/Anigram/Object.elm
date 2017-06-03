@@ -9,7 +9,7 @@ import DragDrop exposing (DragDrop(..))
 
 import Json.Decode as Json
 
-import Html exposing (div, textarea)
+import Html exposing (Html, div, textarea)
 import Html.Attributes exposing (attribute, autofocus)
 import Html.Events exposing (onInput)
 import Html.Events.Extra exposing (onShiftMouseDown)
@@ -25,12 +25,9 @@ import ColorMath exposing (colorToHex)
 
 import Anigram.Common exposing (..)
 
-defaultObject =
+defaultStyle : Style
+defaultStyle =
   { objectType = Shape Circle
-  , id = -1
-  , selected = False
-  , dragDrop = Unselected
-  , dragResize = ((Left, Top), Unselected)
   , hidden = False
   , x = 50
   , y = 50
@@ -40,66 +37,58 @@ defaultObject =
   , stroke = Color.black
   }
 
-newShape shape =
-  { defaultObject
-  | objectType = Shape shape
+newState : ObjectId -> ObjectState 
+newState id = 
+  { id = id
+  , state =
+    { selected = True
+    , dragDrop = Unselected
+    , dragResize = ((Left, Top), Unselected)
+    }
   }
 
-newArrow =
-  { defaultObject
-  | objectType = Arrow
-  }
-
-newText text =
-  { defaultObject
-  | objectType = Text text
-  }
-
+update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   let
     mapSelection function =
-      { model | objects = List.updateIf .selected function model.objects }
-    applyDragDrop dragDrop object =
-      { object | dragDrop = dragDrop }
-    applyDragResize corner dragResize object =
-      { object | dragResize = (corner, dragResize), dragDrop = Unselected }
-    setSelection selected model =
+      { model | objects = List.updateIf (.state >> .selected) function model.objects }
+    setSelection id model =
       { model
       | objects =
-            List.map (select False >> applyDragDrop Unselected) model.objects
-         |> List.updateIf (\object -> object.id == selected.id) (select True >> applyDragDrop PickedUp)
+            List.map (select False >> setDragDrop Unselected) model.objects
+         |> List.updateIf (\object -> object.id == id) (select True >> setDragDrop PickedUp)
       }
-    addSelection selected model =
-      { model | objects = List.updateIf (\object -> object.id == selected.id) (select True >> applyDragDrop PickedUp) model.objects }
+    addSelection id model =
+      { model | objects = List.updateIf (\object -> object.id == id) (select True >> setDragDrop PickedUp) model.objects }
     unselectAll model =
       { model | objects = List.map (select False) model.objects }
-    select state object =
-      { object | selected = state }
   in
     case msg of
       AddObject _ ->
         (mapSelection noInteraction, Cmd.none)
-      SelectObject object ->
-        (setSelection object model, Cmd.none)
-      SelectAddObject object ->
-        (addSelection object model, Cmd.none)
+      SelectObject id ->
+        (setSelection id model, Cmd.none)
+      SelectAddObject id ->
+        (addSelection id model, Cmd.none)
       DeselectAll ->
         (unselectAll model, Cmd.none)
       DragDrop dragDrop ->
-        (mapSelection (applyDragDrop dragDrop)
+        (mapSelection (setDragDrop dragDrop)
         , if DragDrop.isDropped dragDrop then Cmd.message <| Selection <| Move <| DragDrop.delta dragDrop else Cmd.none)
       DragResize corner dragDrop ->
-        (mapSelection (applyDragResize corner dragDrop)
+        (mapSelection (setDragResize corner dragDrop)
         , if DragDrop.isDropped dragDrop then Cmd.message <| Selection <| Resize corner <| DragDrop.delta dragDrop else Cmd.none)
       _ ->
         (model, Cmd.none)
 
+view : List Object -> Html Msg
 view objects =
   div
     [ Attr.style "height: 100vh; flex-grow: 1;" ]
     [ div
       []
-      <| List.map textEditView objects
+      <| List.map (\object -> textEditView object.state object.style)
+      <| objects
     , svg
       [ width "100%"
       , height "100%"
@@ -117,14 +106,15 @@ view objects =
       ++ List.map objectView objects
     ]
 
+subscriptions : Model -> Sub Msg
 subscriptions model =
   let
     dragDrops =
-      List.map .dragDrop model.objects
-      |> List.find DragDrop.isDragged
+      List.map (.state >> .dragDrop) model.objects
+        |> List.find DragDrop.isDragged
     dragResizes =
-      List.map .dragResize model.objects
-      |> List.find (Tuple.second >> DragDrop.isDragged)
+      List.map (.state >> .dragResize) model.objects
+        |> List.find (Tuple.second >> DragDrop.isDragged)
   in
     case (dragResizes, dragDrops) of
       (Just (corner, dragDrop), _) ->
@@ -145,70 +135,95 @@ subscriptions model =
             Keyboard.Key.Unknown 61 {- Plus -} -> Selection <| Hide False 
             _ -> NoOp
 
-move object delta =
-  { object
-  | x = object.x + delta.x
-  , y = object.y + delta.y
+move : Position -> Style -> Style
+move delta style =
+  { style
+  | x = style.x + delta.x
+  , y = style.y + delta.y
   }
 
-resize object corner delta =
+resize : Corner -> Position -> Style -> Style
+resize corner delta style =
   let
     width =
       case corner of
-        (Left, _) -> object.width - delta.x
-        (Right, _) -> object.width + delta.x
+        (Left, _) -> style.width - delta.x
+        (Right, _) -> style.width + delta.x
     height =
       case corner of
-        (_, Top) -> object.height - delta.y
-        (_, Bottom) -> object.height + delta.y
+        (_, Top) -> style.height - delta.y
+        (_, Bottom) -> style.height + delta.y
     x =
       case corner of
-        (Left, _) -> object.x + delta.x
-        (Right, _) -> object.x
+        (Left, _) -> style.x + delta.x
+        (Right, _) -> style.x
     y =
       case corner of
-        (_, Top) -> object.y + delta.y
-        (_, Bottom) -> object.y
+        (_, Top) -> style.y + delta.y
+        (_, Bottom) -> style.y
   in
-    { object
+    { style
     | width = width
     , height = height
     , x = x
     , y = y
     }
 
-select object =
-  { object | selected = True }
+setStyle set object =
+  { object | style = set object.style }
+
+setState set object =
+  { object | state = set object.state }
+
+select selectState =
+  setState <| \state -> { state | selected = selectState }
+
+setDragDrop dragDropState =
+  setState <| \state -> { state | dragDrop = dragDropState }
+
+setDragResize corner dragDropState =
+  setState <| \state -> { state | dragResize = (corner, dragDropState) }
 
 drag object pos =
   { object | dragDrop = DragDrop.drag object.dragDrop pos }
 
-drop object =
-  let
-    delta = DragDrop.delta object.dragDrop
-    movedObject = move object delta
-  in
-    { movedObject | dragDrop = Unselected }
+drop : State -> Style -> Style
+drop state =
+  move <| DragDrop.delta state.dragDrop
 
-resizeDrop object =
+resizeDrop : State -> Style -> Style
+resizeDrop state =
   let
-    (corner, dragResize) = object.dragResize
+    (corner, dragResize) = state.dragResize
     delta = DragDrop.delta dragResize
-    resizedObject = resize object corner delta
   in
-    { resizedObject | dragResize = (corner, Unselected) }
+    resize corner delta
 
-applyCurrentChanges object =
+applyState : State -> Style -> Style
+applyState state style =
   let
-    ifDragged property function object =
-      if DragDrop.isDragged <| property object then
-        function object
+    doDrop style =
+      if DragDrop.isDragged state.dragDrop then
+        drop state style
       else
-        object
+        style
+    doResizeDrop style =
+      if DragDrop.isDragged <| Tuple.second state.dragResize then
+        resizeDrop state style
+      else
+        style
   in
-    object
-      |> ifDragged .dragDrop drop
-      |> ifDragged (.dragResize >> Tuple.second) resizeDrop
+    style
+      |> doDrop
+      |> doResizeDrop
+
+currentObjectStyles : List ObjectState -> List ObjectStyle
+currentObjectStyles objects =
+  objects
+    |> List.map (\object ->
+      { id = object.id
+      , style = applyState object.state defaultStyle
+      })
 
 corners object =
   case object.objectType of
@@ -227,17 +242,18 @@ corners object =
         , { x = object.x, y = object.y+object.height }
         ]
 
-selection =
-  List.filter .selected
+selectedIds : List ObjectState -> List ObjectId
+selectedIds =
+  List.filter (.state >> .selected) >> List.map .id
 
-noInteraction object =
-  { object | selected = False, dragDrop = Unselected }
+noInteraction =
+  setState <| \state -> { state | selected = False, dragDrop = Unselected, dragResize = ((Left, Top), Unselected) }
 
-selectClick object shiftClick =
+selectClick id shiftClick =
   if shiftClick then
-    SelectAddObject object
+    SelectAddObject id 
   else
-    SelectObject object
+    SelectObject id
 
 flip object =
   transform <|
@@ -245,139 +261,137 @@ flip object =
     ++
     (if object.height < 0 then "scale(1 -1) translate(0 "++toString (-2*object.y)++")" else "")
 
+objectView : Object -> Html Msg
 objectView object =
-  if object.selected then
-    object
-    |> applyCurrentChanges
-    |> selectedView
-  else if not object.hidden then
-    unselectedView object
+  if object.state.selected then
+    selectedView object.id object.style
+  else
+    unselectedView object.id object.style
+
+unselectedView : ObjectId -> Style -> Html Msg
+unselectedView objectId object =
+  if not object.hidden then
+    case object.objectType of
+      Shape Circle ->
+        ellipse
+          [ cx <| toString (object.x + object.width//2)
+          , cy <| toString (object.y + object.height//2)
+          , rx <| toString <| abs <| object.width//2
+          , ry <| toString <| abs <| object.height//2
+          , flip object
+          , fill <| "#" ++ colorToHex object.fill
+          , stroke <| "#" ++ colorToHex object.stroke
+          , onShiftMouseDown <| selectClick objectId
+          ]
+          []
+      Shape Square ->
+        rect
+          [ x <| toString object.x
+          , y <| toString object.y
+          , width <| toString <| abs object.width
+          , height <| toString <| abs object.height
+          , flip object
+          , fill <| "#" ++ colorToHex object.fill
+          , stroke <| "#" ++ colorToHex object.stroke
+          , Attr.cursor "move"
+          , onShiftMouseDown <| selectClick objectId
+          ]
+          []
+      Arrow ->
+        let
+          linePath =
+            subpath
+              (startAt (toFloat <| object.x, toFloat <| object.y)) open
+              [ lineTo (toFloat <| object.x + abs object.width, toFloat <| object.y + abs object.height)
+              ]
+          trianglePath = "M0,0 V6 L3,3 Z"
+        in
+          g
+            []
+            [ defs
+              []
+              [ marker
+                [ id <| "head-"++toString objectId
+                , orient "auto"
+                , markerWidth "4"
+                , markerHeight "8"
+                , refX "2.5"
+                , refY "3"
+                ]
+                [ Svg.path
+                  [ d <| trianglePath
+                  , fill <| "#" ++ colorToHex object.stroke
+                  ]
+                  []
+                ]
+              ]
+            , Svg.path
+              [ d <| pathToString [linePath]
+              , flip object
+              , attribute "marker-end" <| "url(#head-"++toString id++")"
+              , stroke <| "#" ++ colorToHex object.stroke
+              , fill "none"
+              , strokeWidth "3"
+              , onShiftMouseDown <| selectClick objectId
+              ]
+              [
+              ]
+            ]
+      Text string ->
+        text_
+          [ x <| toString object.x
+          , y <| toString object.y
+          , dx "2"
+          , dy "12"
+          , flip object
+          , fontSize "12"
+          , fontFamily "sans-serif"
+          , Attr.cursor "text"
+          , onShiftMouseDown <| selectClick objectId
+          ]
+          [text string]
   else
     text ""
 
-unselectedView object =
-  case object.objectType of
-    Shape Circle ->
-      ellipse
-        [ cx <| toString (object.x + object.width//2)
-        , cy <| toString (object.y + object.height//2)
-        , rx <| toString <| abs <| object.width//2
-        , ry <| toString <| abs <| object.height//2
-        , flip object
-        , fill <| "#" ++ colorToHex object.fill
-        , stroke <| "#" ++ colorToHex object.stroke
-        , onShiftMouseDown <| selectClick object
-        ]
-        []
-    Shape Square ->
-      rect
-        [ x <| toString object.x
-        , y <| toString object.y
-        , width <| toString <| abs object.width
-        , height <| toString <| abs object.height
-        , flip object
-        , fill <| "#" ++ colorToHex object.fill
-        , stroke <| "#" ++ colorToHex object.stroke
+textEditView : State -> Style -> Html Msg
+textEditView state object =
+  case (object.objectType, state.selected) of
+    (Text string, True) ->
+      div
+        [ Html.Attributes.style
+          [ ("position", "absolute")
+          , ("left", toString object.x ++ "px")
+          , ("top", toString (object.y + 40) ++ "px")
+          , ("width", toString (abs object.width) ++ "px")
+          , ("height", toString (abs object.height) ++ "px")
+          ]
+        , onMouseDown (DragDrop <| PickedUp)
         , Attr.cursor "move"
-        , onShiftMouseDown <| selectClick object
         ]
-        []
-    Arrow ->
-      let
-        linePath =
-          subpath
-            (startAt (toFloat <| object.x, toFloat <| object.y)) open
-            [ lineTo (toFloat <| object.x + abs object.width, toFloat <| object.y + abs object.height)
-            ]
-        trianglePath = "M0,0 V6 L3,3 Z"
-      in
-        g
-          []
-          [ defs
-            []
-            [ marker
-              [ id <| "head-"++toString object.id
-              , orient "auto"
-              , markerWidth "4"
-              , markerHeight "8"
-              , refX "2.5"
-              , refY "3"
-              ]
-              [ Svg.path
-                [ d <| trianglePath
-                , fill <| "#" ++ colorToHex object.stroke
-                ]
-                []
-              ]
-            ]
-          , Svg.path
-            [ d <| pathToString [linePath]
-            , flip object
-            , attribute "marker-end" <| "url(#head-"++toString object.id++")"
-            , stroke <| "#" ++ colorToHex object.stroke
-            , fill "none"
-            , strokeWidth "3"
-            , onShiftMouseDown <| selectClick object
-            ]
-            [
-            ]
-          ]
-    Text string ->
-      text_
-        [ x <| toString object.x
-        , y <| toString object.y
-        , dx "2"
-        , dy "12"
-        , flip object
-        , fontSize "12"
-        , fontFamily "sans-serif"
-        , Attr.cursor "text"
-        , onShiftMouseDown <| selectClick object
-        ]
-        [text string]
-
-textEditView object =
-  let
-    obj = object |> applyCurrentChanges
-  in
-    case (obj.objectType, obj.selected) of
-      (Text string, True) ->
-        div
+        [ textarea
           [ Html.Attributes.style
-            [ ("position", "absolute")
-            , ("left", toString obj.x ++ "px")
-            , ("top", toString (obj.y + 40) ++ "px")
-            , ("width", toString (abs obj.width) ++ "px")
-            , ("height", toString (abs obj.height) ++ "px")
+            [ ("resize", "none")
+            , ("box-sizing", "border-box")
+            , ("width", "100%")
+            , ("height", "100%")
+            , ("margin-top", "0px")
+            , ("font-size", "12px")
+            , ("font-family", "sans-serif")
+            , ("border", "none")
+            , ("background", "none")
+            , ("opacity", if object.hidden then "0.2" else "1")
             ]
-          , if object.selected then
-              onMouseDown (DragDrop <| PickedUp)
-            else
-              onClick <| SelectObject object
-          , Attr.cursor "move"
+          , autofocus True
+          , onInput (Selection << SetText)
           ]
-          [ textarea
-            [ Html.Attributes.style
-              [ ("resize", "none")
-              , ("box-sizing", "border-box")
-              , ("width", "100%")
-              , ("height", "100%")
-              , ("margin-top", "0px")
-              , ("font-size", "12px")
-              , ("font-family", "sans-serif")
-              , ("border", "none")
-              , ("background", "none")
-              ]
-            , autofocus True
-            , onInput (Selection << SetText)
-            ]
-            [ text string
-            ]
+          [ text string
           ]
-      _ ->
-        text ""
+        ]
+    _ ->
+      text ""
 
-selectedView object =
+selectedView : ObjectId -> Style -> Html Msg
+selectedView id object =
   let
     cornerSvg corner pos =
       circle
@@ -400,19 +414,16 @@ selectedView object =
         []
   in
     g
-    [ if object.selected then
-        onMouseDown (DragDrop <| PickedUp)
-      else
-        onClick <| SelectObject object
+    [ onMouseDown (DragDrop <| PickedUp)
     ] <|
     [ case object.objectType of
         Text _ ->
           text ""
         _ ->
           if not object.hidden then
-            unselectedView object
+            unselectedView id object
           else
-            faded <| unselectedView object
+            faded <| unselectedView id object
     , box
     ] ++ cornersSvg
 

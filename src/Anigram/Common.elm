@@ -8,11 +8,29 @@ import Html exposing (Html)
 import DragDrop
 
 type alias Object =
-  { objectType : ObjectType
-  , id : ObjectId
-  , selected : Bool
+  { id : ObjectId
+  , state : State
+  , style : Style
+  }
+
+type alias ObjectState =
+  { id : ObjectId
+  , state : State
+  }
+
+type alias ObjectStyle =
+  { id : ObjectId
+  , style : Style
+  }
+
+type alias State =
+  { selected : Bool
   , dragDrop : DragDrop.DragDrop
   , dragResize : (Corner, DragDrop.DragDrop)
+  }
+
+type alias Style =
+  { objectType : ObjectType
   , hidden : Bool
   , x : Int 
   , y : Int
@@ -54,8 +72,7 @@ type Control msg
   | ObjectAdder
     { tooltip : String
     , icon : Html msg
-    , objectId : ObjectId
-    , object : Object
+    , object : ObjectType
     }
   | ColorSelector
     { id : Int
@@ -70,21 +87,20 @@ type ColorSelectorKind
   | StrokeSelector
 
 type alias Model =
-  { objects : List Object
+  { objects : List ObjectState
   , frames : List Frame
   , frameIndex : Int
   , controls : List (Control Msg)
   }
 
 type alias Anigram =
-  { objects : List Object
-  , frames : List Frame
+  { frames : List Frame
   }
 
 type Msg
-  = AddObject Object
-  | SelectObject Object
-  | SelectAddObject Object
+  = AddObject ObjectType
+  | SelectObject ObjectId
+  | SelectAddObject ObjectId
   | DeselectAll
   | DragDrop DragDrop.DragDrop
   | DragResize Corner DragDrop.DragDrop
@@ -99,7 +115,8 @@ type Msg
   | NoOp
 
 type Change
-  = Hide Bool
+  = ChangeType ObjectType
+  | Hide Bool
   | SetText String
   | Move Position
   | Resize Corner Position

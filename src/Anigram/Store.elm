@@ -35,7 +35,7 @@ loadAnigram =
 anigramResult : Result Kinto.Error (Kinto.Pager Anigram) -> Anigram
 anigramResult result =
   let
-    default = { objects = [], frames = [Anigram.Frames.empty] }
+    default = { frames = [Anigram.Frames.empty] }
   in
     result
       |> Result.map .objects

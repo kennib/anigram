@@ -10,52 +10,11 @@ import Color exposing (Color)
 import ColorMath exposing (hexToColor)
 
 import Anigram.Common exposing (..)
-import Anigram.Object exposing (defaultObject)
 
 decodeAnigram : Json.Decoder Anigram
 decodeAnigram =
-  Json.map2 Anigram
-    (Json.field "objects" <| Json.list decodeObject)
+  Json.map Anigram
     (Json.field "frames" <| Json.list decodeFrame)
-
-decodeObject : Json.Decoder Object
-decodeObject =
-  Json.map8
-    (\objectType id x y width height fill stroke ->
-      { defaultObject
-      | objectType = objectType
-      , id = id
-      , x = x
-      , y = y
-      , width = width
-      , height = height
-      , fill = fill
-      , stroke = stroke
-      }
-    )
-    (Json.field "objectType" decodeObjectType)
-    (Json.field "id" Json.int)
-    (Json.field "x" Json.int)
-    (Json.field "y" Json.int)
-    (Json.field "width" Json.int)
-    (Json.field "height" Json.int)
-    (Json.field "fill" decodeColor)
-    (Json.field "stroke" decodeColor)
-
-decodeObjectType : Json.Decoder ObjectType
-decodeObjectType =
-  Json.string
-  |> Json.map (\objectType ->
-    case objectType of
-      "Shape Circle" -> Shape Circle
-      "Shape Square" -> Shape Square
-      "Arrow" -> Arrow
-      text -> 
-        if String.startsWith "Text " text then
-          Text <| String.dropLeft 5 text
-        else
-          Text text
-  )
 
 decodeFrame : Json.Decoder Frame
 decodeFrame =
@@ -72,6 +31,9 @@ decodeChange =
   Json.field "change" Json.string
   |> Json.andThen (\change ->
     case change of
+      "changeType" ->
+        Json.map (Just << ChangeType)
+          (Json.field "type" decodeObjectType)
       "hide" ->
         Json.map (Just << Hide)
           (Json.field "state" Json.bool)
@@ -93,6 +55,21 @@ decodeChange =
           (Json.field "color" decodeColor)
       _ ->
         Json.succeed Nothing
+  )
+
+decodeObjectType : Json.Decoder ObjectType
+decodeObjectType =
+  Json.string
+  |> Json.map (\objectType ->
+    case objectType of
+      "Shape Circle" -> Shape Circle
+      "Shape Square" -> Shape Square
+      "Arrow" -> Arrow
+      text -> 
+        if String.startsWith "Text " text then
+          Text <| String.dropLeft 6 <| String.dropRight 1 <| text
+        else
+          Text text
   )
 
 decodeColor : Json.Decoder Color

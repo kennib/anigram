@@ -17,6 +17,13 @@ import Anigram.Change as Change
 empty : Frame
 empty = Dict.empty
 
+objectIds : List Frame -> List ObjectId
+objectIds frames =
+  frames
+    |> List.map Dict.keys
+    |> List.concat
+    |> List.unique
+
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
@@ -34,17 +41,14 @@ update msg model =
     SelectFrame index ->
       ( { model | frameIndex = index }
       , Cmd.none )
-    AddObject object ->
-      ( { model | objects = model.objects ++ [object] }
-        |> addChangeToModelAt 0 (Hide True) 
-        |> addChangeToModelAt model.frameIndex (Hide False)
+    AddObject objectType ->
+      ( { model | objects = model.objects ++ [Objects.newState <| List.length model.objects] }
+          |> addChangeToModelAt 0 (ChangeType objectType)
+          |> addChangeToModelAt 0 (Hide True) 
+          |> addChangeToModelAt model.frameIndex (Hide False)
       , Cmd.none)
     _ ->
       (model, Cmd.none)
-
-selection objects =
-  Objects.selection objects
-    |> List.map .id
 
 updateChange : Change -> Model -> (Model, Cmd Msg)
 updateChange change model =
@@ -53,9 +57,9 @@ updateChange change model =
 addChangeToModelAt : Int -> Change -> Model -> Model
 addChangeToModelAt index change model =
   { model | frames =
-    List.updateAt index (addChanges (selection model.objects) change) model.frames
+    List.updateAt index (addChanges (Objects.selectedIds model.objects) change) model.frames
       |> Maybe.withDefault model.frames
-      |> reduceChanges model.objects
+      |> reduceChanges (Objects.currentObjectStyles model.objects)
   }
 
 addChangeToModel : Change -> Model -> Model
@@ -76,7 +80,7 @@ addChange id change frame =
   in
     Dict.update id update frame 
 
-reduceChanges : List Object -> List Frame -> List Frame
+reduceChanges : List ObjectStyle -> List Frame -> List Frame
 reduceChanges objects frames =
   let
     prevFrameObjects = List.scanl applyFrame objects frames
@@ -89,7 +93,8 @@ reduceFrameChanges : Frame -> Frame
 reduceFrameChanges frame =
   let
     reduceObjectChanges objectId changes =
-      (changes |> List.filterNot Change.isHide |> List.filterNot Change.isSetText |> List.filterNot Change.isFill |> List.filterNot Change.isStroke)
+      List.filter Change.isMove changes
+      ++ getLastChange Change.isChangeType changes
       ++ getLastChange Change.isHide changes
       ++ getLastChange Change.isSetText changes
       ++ getLastChange Change.isFill changes
@@ -103,18 +108,18 @@ reduceFrameChanges frame =
     frame
     |> Dict.map reduceObjectChanges
 
-removeNonChanges : List Object -> Frame -> Frame
+removeNonChanges : List ObjectStyle -> Frame -> Frame
 removeNonChanges prevObjects frame =
   let
-    nonChange prevObject change =
-      applyChange change prevObject == prevObject
+    nonChange prevStyle change =
+      applyChange change prevStyle == prevStyle
 
-    filterNonChanges prevObject changes =
-      List.filter (not << nonChange prevObject) changes
+    filterNonChanges prevStyle changes =
+      List.filter (not << nonChange prevStyle) changes
 
     filterObjectNonChanges prevObject objectId changes =
       if objectId == prevObject.id then
-        filterNonChanges prevObject changes
+        filterNonChanges prevObject.style changes
       else
         changes
 
@@ -134,10 +139,12 @@ view model =
     [ div
       []
       <| List.indexedMap (viewFrame model)
-      <| applyFrames model.frames model.objects
+      <| applyFrames model.frames
+      <| List.map (flip ObjectStyle <| Objects.defaultStyle)
+      <| List.map .id model.objects
     ]
 
-viewFrame : Model -> Int -> List Object -> Html Msg
+viewFrame : Model -> Int -> List ObjectStyle -> Html Msg
 viewFrame model index objects =
   svg
     [ width "100%"
@@ -146,41 +153,55 @@ viewFrame model index objects =
     , Attr.style <| if model.frameIndex == index then "border: 1px solid red" else "border: 1px solid black"
     , onClick <| SelectFrame index
     ]
-    <| List.map Objects.objectView
-    <| List.map Objects.noInteraction
+    <| List.map (\object -> Objects.unselectedView object.id object.style)
     <| objects
 
-getFrameObjects : Int -> List Frame -> List Object -> Maybe (List Object)
-getFrameObjects index frames objects =
-  List.scanl applyFrame objects frames
-  |> List.drop 1
-  |> List.getAt index
+getFrameObjects : Int -> List Frame -> List ObjectState -> Maybe (List Object)
+getFrameObjects index frames objectStates =
+  let
+    objects = List.map style objectStates
+    style object =
+      { id = object.id
+      , state = object.state
+      , style = Objects.applyState object.state Objects.defaultStyle
+      }
+    objectChange frame object = 
+      Dict.get object.id frame
+        |> Maybe.map (\changes -> Objects.setStyle (applyChanges changes) object)
+        |> Maybe.withDefault object
+    applyFrame frame objects =
+      List.map (objectChange frame) objects
+  in
+    List.scanl applyFrame objects frames
+    |> List.drop 1
+    |> List.getAt index
 
-applyFrames : List Frame -> List Object -> List (List Object)
+applyFrames : List Frame -> List ObjectStyle -> List (List ObjectStyle)
 applyFrames frames objects =
   List.scanl applyFrame objects frames
   |> List.drop 1
 
-applyFrame : Frame  -> List Object -> List Object
+applyFrame : Frame -> List ObjectStyle -> List ObjectStyle
 applyFrame frame objects =
   let
     objectChange object =
       Dict.get object.id frame
-        |> Maybe.map (\changes -> applyChanges changes object)
+        |> Maybe.map (\changes -> Objects.setStyle (applyChanges changes) object)
         |> Maybe.withDefault object
   in
     List.map objectChange objects
 
-applyChanges : List Change -> Object -> Object
-applyChanges changes object =
-  List.foldl applyChange object changes
+applyChanges : List Change -> Style -> Style
+applyChanges changes style =
+  List.foldl applyChange style changes
 
-applyChange : Change -> Object -> Object
-applyChange change object =
+applyChange : Change -> Style -> Style
+applyChange change style =
   case change of
-    Hide state -> { object | hidden = state }
-    SetText string -> { object | objectType = Text string }
-    Move delta -> Objects.move object delta
-    Resize corner delta -> Objects.resize object corner delta
-    Fill color -> { object | fill = color }
-    Stroke color -> { object | stroke = color }
+    ChangeType objectType -> { style | objectType = objectType }
+    Hide state -> { style | hidden = state }
+    SetText string -> { style | objectType = Text string }
+    Move delta -> Objects.move delta style
+    Resize corner delta -> Objects.resize corner delta style
+    Fill color -> { style | fill = color }
+    Stroke color -> { style | stroke = color }

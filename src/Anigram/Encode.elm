@@ -13,21 +13,7 @@ import Anigram.Common exposing (..)
 encodeAnigram : Anigram -> Json.Value
 encodeAnigram anigram =
   Json.object
-    [ ( "objects", Json.list <| List.map encodeObject anigram.objects )
-    , ( "frames", Json.list <| List.map encodeFrame anigram.frames )
-    ]
-
-encodeObject : Object -> Json.Value
-encodeObject object =
-  Json.object
-    [ ( "objectType", Json.string <| toString object.objectType )
-    , ( "id", Json.int object.id )
-    , ( "x", Json.int object.x )
-    , ( "y", Json.int object.y )
-    , ( "width", Json.int object.width )
-    , ( "height", Json.int object.height )
-    , ( "fill", encodeColor object.fill )
-    , ( "stroke", encodeColor object.stroke )
+    [ ( "frames", Json.list <| List.map encodeFrame anigram.frames )
     ]
 
 encodeFrame : Frame -> Json.Value
@@ -46,6 +32,11 @@ encodeChanges changes =
 encodeChange : Change -> Json.Value
 encodeChange change =
   case change of
+    ChangeType objectType ->
+      Json.object
+        [ ( "change", Json.string "changeType" )
+        , ( "type", Json.string <| toString objectType )
+        ]
     Hide state ->
       Json.object
         [ ( "change", Json.string "hide" )
