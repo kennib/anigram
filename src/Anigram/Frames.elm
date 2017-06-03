@@ -36,6 +36,8 @@ update msg model =
       , Cmd.none )
     AddObject object ->
       ( { model | objects = model.objects ++ [object] }
+        |> addChangeToModelAt 0 (Hide True) 
+        |> addChangeToModelAt model.frameIndex (Hide False)
       , Cmd.none)
     _ ->
       (model, Cmd.none)
@@ -48,13 +50,17 @@ updateChange : Change -> Model -> (Model, Cmd Msg)
 updateChange change model =
   (addChangeToModel change model, Cmd.none)
 
-addChangeToModel : Change -> Model -> Model
-addChangeToModel change model =
+addChangeToModelAt : Int -> Change -> Model -> Model
+addChangeToModelAt index change model =
   { model | frames =
-    List.updateAt model.frameIndex (addChanges (selection model.objects) change) model.frames
+    List.updateAt index (addChanges (selection model.objects) change) model.frames
       |> Maybe.withDefault model.frames
       |> reduceChanges model.objects
   }
+
+addChangeToModel : Change -> Model -> Model
+addChangeToModel change model =
+  addChangeToModelAt model.frameIndex change model
 
 addChanges : List ObjectId -> Change -> Frame -> Frame
 addChanges ids change frame =
