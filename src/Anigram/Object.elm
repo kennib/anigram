@@ -104,6 +104,7 @@ view objects =
       [ rect
         [ onClick DeselectAll
         , fill "#00000000"
+        , opacity "0"
         , width "10000"
         , height "10000"
         , stroke "none"
@@ -383,7 +384,8 @@ selectedView object =
         , width <| toString <| abs object.width
         , height <| toString <| abs object.height
         , flip object
-        , fill <| "#88008800"
+        , fill "#00000000"
+        , opacity "0"
         ]
         []
   in
