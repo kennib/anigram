@@ -18,6 +18,8 @@ model =
   , addObjectControl "Add a Square" Icon.square <| Obj.select <| Obj.newShape Square
   , addObjectControl "Add an Arrow" Icon.long_arrow_right <| Obj.select <| Obj.newArrow
   , addObjectControl "Add Text" Icon.file_text <| Obj.select <| Obj.newText "Add Text here"
+  , buttonControl "Show" Icon.eye <| Selection <| Hide False 
+  , buttonControl "Hide" Icon.eye_slash <| Selection <| Hide True
   , colorControl 0 "Fill" Color.green FillSelector
   , colorControl 1 "Stroke" Color.grey StrokeSelector
   , buttonControl "Add Frame" Icon.plus_square AddFrame
