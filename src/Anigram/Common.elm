@@ -13,6 +13,7 @@ type alias Object =
   , selected : Bool
   , dragDrop : DragDrop.DragDrop
   , dragResize : (Corner, DragDrop.DragDrop)
+  , hidden : Bool
   , x : Int 
   , y : Int
   , width : Int
@@ -95,9 +96,11 @@ type Msg
   | AnigramLoaded Anigram
   | Selection Change
   | Control ControlMsg
+  | NoOp
 
 type Change
-  = SetText String
+  = Hide Bool
+  | SetText String
   | Move Position
   | Resize Corner Position
   | Fill Color

@@ -83,7 +83,8 @@ reduceFrameChanges : Frame -> Frame
 reduceFrameChanges frame =
   let
     reduceObjectChanges objectId changes =
-      (changes |> List.filterNot Change.isSetText |> List.filterNot Change.isFill |> List.filterNot Change.isStroke)
+      (changes |> List.filterNot Change.isHide |> List.filterNot Change.isSetText |> List.filterNot Change.isFill |> List.filterNot Change.isStroke)
+      ++ getLastChange Change.isHide changes
       ++ getLastChange Change.isSetText changes
       ++ getLastChange Change.isFill changes
       ++ getLastChange Change.isStroke changes
@@ -171,6 +172,7 @@ applyChanges changes object =
 applyChange : Change -> Object -> Object
 applyChange change object =
   case change of
+    Hide state -> { object | hidden = state }
     SetText string -> { object | objectType = Text string }
     Move delta -> Objects.move object delta
     Resize corner delta -> Objects.resize object corner delta

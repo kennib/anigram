@@ -72,6 +72,9 @@ decodeChange =
   Json.field "change" Json.string
   |> Json.andThen (\change ->
     case change of
+      "hide" ->
+        Json.map (Just << Hide)
+          (Json.field "state" Json.bool)
       "setText" ->
         Json.map (Just << SetText)
           (Json.field "text" Json.string)

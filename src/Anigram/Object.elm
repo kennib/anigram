@@ -3,6 +3,8 @@ module Anigram.Object exposing (..)
 import List.Extra as List
 
 import Mouse
+import Keyboard
+import Keyboard.Key
 import DragDrop exposing (DragDrop(..))
 
 import Json.Decode as Json
@@ -29,6 +31,7 @@ defaultObject =
   , selected = False
   , dragDrop = Unselected
   , dragResize = ((Left, Top), Unselected)
+  , hidden = False
   , x = 50
   , y = 50
   , width = 100
@@ -135,7 +138,12 @@ subscriptions model =
           , Mouse.ups <| \pos -> DragDrop <| DragDrop.drop <| DragDrop.drag dragDrop pos
           ]
       _ ->
-        Sub.none
+        Keyboard.presses <| \key ->
+          case Keyboard.Key.fromCode key of
+            Keyboard.Key.Delete -> Selection <| Hide True
+            Keyboard.Key.Backspace -> Selection <| Hide True
+            Keyboard.Key.Unknown 61 {- Plus -} -> Selection <| Hide False 
+            _ -> NoOp
 
 move object delta =
   { object
@@ -242,8 +250,10 @@ objectView object =
     object
     |> applyCurrentChanges
     |> selectedView
-  else
+  else if not object.hidden then
     unselectedView object
+  else
+    text ""
 
 unselectedView object =
   case object.objectType of
@@ -399,6 +409,9 @@ selectedView object =
         Text _ ->
           text ""
         _ ->
-          unselectedView object
+          if not object.hidden then
+            unselectedView object
+          else
+            text ""
     , box
     ] ++ cornersSvg

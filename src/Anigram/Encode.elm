@@ -46,6 +46,11 @@ encodeChanges changes =
 encodeChange : Change -> Json.Value
 encodeChange change =
   case change of
+    Hide state ->
+      Json.object
+        [ ( "change", Json.string "hide" )
+        , ( "state", Json.bool state )
+        ]
     SetText string ->
       Json.object
         [ ( "change", Json.string "setText" )
