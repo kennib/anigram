@@ -60,6 +60,10 @@ type YSide = Top | Bottom
 
 type alias ObjectId = Int
 
+type SnapLine
+  = HorizontalSnap Int
+  | VerticalSnap Int
+
 type alias Frame =
   Dict ObjectId (List Change)
 

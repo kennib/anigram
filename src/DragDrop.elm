@@ -36,6 +36,12 @@ delta dragDrop =
     Drop start end -> { x = end.x - start.x, y = end.y - start.y }
     _ -> { x = 0, y = 0 }
 
+mapEnd function dragDrop =
+    case dragDrop of
+      Drag start end -> Drag start <| function end
+      Drop start end -> Drop start <| function end
+      _ -> dragDrop
+
 isDragged dragDrop =
   case dragDrop of
     Unselected -> False

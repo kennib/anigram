@@ -2,9 +2,6 @@ module Anigram.Object exposing (..)
 
 import List.Extra as List
 
-import Mouse
-import Keyboard
-import Keyboard.Key
 import DragDrop exposing (DragDrop(..))
 
 import Json.Decode as Json
@@ -105,35 +102,6 @@ view objects =
       ]
       ++ List.map objectView objects
     ]
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
-  let
-    dragDrops =
-      List.map (.state >> .dragDrop) model.objects
-        |> List.find DragDrop.isDragged
-    dragResizes =
-      List.map (.state >> .dragResize) model.objects
-        |> List.find (Tuple.second >> DragDrop.isDragged)
-  in
-    case (dragResizes, dragDrops) of
-      (Just (corner, dragDrop), _) ->
-        Sub.batch
-          [ Mouse.moves <| \pos -> DragResize corner <| DragDrop.drag dragDrop pos
-          , Mouse.ups <| \pos -> DragResize corner <| DragDrop.drop <| DragDrop.drag dragDrop pos
-          ]
-      (_, Just dragDrop) ->
-        Sub.batch
-          [ Mouse.moves <| \pos -> DragDrop <| DragDrop.drag dragDrop pos
-          , Mouse.ups <| \pos -> DragDrop <| DragDrop.drop <| DragDrop.drag dragDrop pos
-          ]
-      _ ->
-        Keyboard.presses <| \key ->
-          case Keyboard.Key.fromCode key of
-            Keyboard.Key.Delete -> Selection <| Hide True
-            Keyboard.Key.Backspace -> Selection <| Hide True
-            Keyboard.Key.Unknown 61 {- Plus -} -> Selection <| Hide False 
-            _ -> NoOp
 
 move : Position -> Style -> Style
 move delta style =

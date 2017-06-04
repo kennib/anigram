@@ -13,6 +13,7 @@ import Color exposing (Color)
 import Anigram.Common exposing (..)
 import Anigram.Object as Objects
 import Anigram.Change as Change
+import Anigram.Snapping as Snap
 
 empty : Frame
 empty = Dict.empty
@@ -159,11 +160,31 @@ viewFrame model index objects =
 getFrameObjects : Int -> List Frame -> List ObjectState -> Maybe (List Object)
 getFrameObjects index frames objectStates =
   let
+    frameObjects = getFrameObjectsWithoutState index frames objectStates
+    snap =
+      Snap.snapDragDrop
+        (frameObjects |> Maybe.withDefault [])
+        (Objects.selectedIds objectStates)
+    snapState state =
+      { state | dragDrop = snap state.dragDrop }
+    applyState : State -> Style -> Style
+    applyState state style =
+      Objects.applyState (snapState state) style
+    applyObjectState : Object -> Object
+    applyObjectState object =
+      Objects.setStyle (applyState object.state) object
+  in
+    frameObjects
+      |> Maybe.map (List.map applyObjectState)
+
+getFrameObjectsWithoutState : Int -> List Frame -> List ObjectState -> Maybe (List Object)
+getFrameObjectsWithoutState index frames objectStates =
+  let
     objects = List.map style objectStates
     style object =
       { id = object.id
       , state = object.state
-      , style = Objects.applyState object.state Objects.defaultStyle
+      , style = Objects.defaultStyle
       }
     objectChange frame object = 
       Dict.get object.id frame
