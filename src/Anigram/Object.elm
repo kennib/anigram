@@ -296,7 +296,7 @@ unselectedView objectId object =
             , Svg.path
               [ d <| pathToString [linePath]
               , flip object
-              , attribute "marker-end" <| "url(#head-"++toString id++")"
+              , attribute "marker-end" <| "url(#head-"++toString objectId++")"
               , stroke <| "#" ++ colorToHex object.stroke
               , fill "none"
               , strokeWidth "3"
