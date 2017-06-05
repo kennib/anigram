@@ -378,11 +378,12 @@ selectedView id object =
         , flip object
         , fill "#00000000"
         , opacity "0"
+        , onMouseDown (DragDrop <| PickedUp)
         ]
         []
   in
     g
-    [ onMouseDown (DragDrop <| PickedUp)
+    [
     ] <|
     [ case object.objectType of
         Text _ ->

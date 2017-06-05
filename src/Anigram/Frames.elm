@@ -95,6 +95,7 @@ reduceFrameChanges frame =
   let
     reduceObjectChanges objectId changes =
       List.filter Change.isMove changes
+      ++ List.filter Change.isResize changes
       ++ getLastChange Change.isChangeType changes
       ++ getLastChange Change.isHide changes
       ++ getLastChange Change.isSetText changes
