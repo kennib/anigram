@@ -166,8 +166,12 @@ getFrameObjects index frames objectStates =
       Snap.snapDragDrop
         (frameObjects |> Maybe.withDefault [])
         (Objects.selectedIds objectStates)
+    snapResize =
+      Snap.snapResize
+        (frameObjects |> Maybe.withDefault [])
+        (Objects.selectedIds objectStates)
     snapState state =
-      { state | dragDrop = snap state.dragDrop }
+      { state | dragDrop = snap state.dragDrop, dragResize = snapResize state.dragResize }
     applyState : State -> Style -> Style
     applyState state style =
       Objects.applyState (snapState state) style

@@ -8,6 +8,16 @@ import DragDrop exposing (DragDrop)
 import Anigram.Common exposing (..)
 import Anigram.Object as Object
 
+snapResize  : List Object -> List ObjectId -> (Corner, DragDrop) -> (Corner, DragDrop)
+snapResize objects snappingObjects (corner, dragDrop) =
+  let
+    otherObjects = List.filterNot (\obj -> List.member obj.id snappingObjects) objects
+    selected = List.filter (\obj -> List.member obj.id snappingObjects) objects
+      |> List.map (\object -> Object.setStyle (Object.applyState object.state) object)
+    snapped = snap (snapLines <| List.map .style otherObjects) (List.andThen (cornerSnapLines corner) <| List.map .style selected)
+  in
+    (corner, DragDrop.mapEnd snapped dragDrop)
+
 snapDragDrop : List Object -> List ObjectId -> DragDrop -> DragDrop
 snapDragDrop objects snappingObjects =
   let
@@ -46,6 +56,18 @@ snapLines : List Style -> List SnapLine
 snapLines objects =
   List.concat
     <| List.map objectSnapLines objects
+
+cornerSnapLines : Corner -> Style -> List SnapLine
+cornerSnapLines (xSide, ySide) object =
+  let
+    horizontal = case xSide of
+      Left -> [ HorizontalSnap object.x ]
+      Right -> [ HorizontalSnap <| object.x + object.width ]
+    vertical = case ySide of
+      Top -> [ VerticalSnap object.y ]
+      Bottom -> [ VerticalSnap <| object.y + object.height ]
+   in
+    horizontal ++ vertical
 
 objectSnapLines : Style -> List SnapLine
 objectSnapLines object =

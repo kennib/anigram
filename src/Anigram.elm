@@ -64,12 +64,16 @@ subscriptions model =
       Snap.snapDragDrop
         (Frames.getFrameObjectsWithoutState model.frameIndex model.frames model.objects |> Maybe.withDefault [])
         (Objects.selectedIds model.objects)
+    snapResize =
+      Snap.snapResize
+        (Frames.getFrameObjectsWithoutState model.frameIndex model.frames model.objects |> Maybe.withDefault [])
+        (Objects.selectedIds model.objects)
   in
     case (dragResizes, dragDrops) of
       (Just (corner, dragDrop), _) ->
         Sub.batch
           [ Mouse.moves <| \pos -> DragResize corner <| DragDrop.drag dragDrop pos
-          , Mouse.ups <| \pos -> DragResize corner <| DragDrop.drop <| DragDrop.drag dragDrop pos
+          , Mouse.ups <| \pos -> uncurry DragResize <| curry snapResize corner <| DragDrop.drop <| DragDrop.drag dragDrop pos
           ]
       (_, Just dragDrop) ->
         Sub.batch
