@@ -81,12 +81,18 @@ subscriptions model =
           , Mouse.ups <| \pos -> DragDrop <| snap <| DragDrop.drop <| DragDrop.drag dragDrop pos
           ]
       _ ->
-        Keyboard.presses <| \key ->
-          case Keyboard.Key.fromCode key of
-            Keyboard.Key.Delete -> Selection <| Hide True
-            Keyboard.Key.Backspace -> Selection <| Hide True
-            Keyboard.Key.Unknown 61 {- Plus -} -> Selection <| Hide False
-            _ -> NoOp
+        Sub.batch
+          [ keyboardSubscriptions
+          ]
+
+keyboardSubscriptions : Sub Msg
+keyboardSubscriptions =
+  Keyboard.presses <| \key ->
+    case Keyboard.Key.fromCode key of
+      Keyboard.Key.Delete -> Selection <| Hide True
+      Keyboard.Key.Backspace -> Selection <| Hide True
+      Keyboard.Key.Unknown 61 {- Plus -} -> Selection <| Hide False
+      _ -> NoOp
 
 view : Model -> Html Msg
 view model =
