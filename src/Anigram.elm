@@ -103,6 +103,7 @@ view model =
   div
     [ style
       [ ("height", "100vh")
+      , ("overflow", "hidden")
       ]
     ]
     [ Ctrls.view model
