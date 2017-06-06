@@ -1,6 +1,7 @@
 module Anigram.Frames exposing (..)
 
 import Dict
+import Dict.Extra as Dict
 import List.Extra as List
 
 import Html exposing (..)
@@ -14,6 +15,7 @@ import Anigram.Common exposing (..)
 import Anigram.Object as Objects
 import Anigram.Change as Change
 import Anigram.Snapping as Snap
+import Anigram.Selection as Selection
 
 empty : Frame
 empty = Dict.empty
@@ -30,6 +32,9 @@ update msg model =
   case msg of
     Selection action ->
       updateChange action model
+    Duplicate ->
+      mergeAnigram model (Selection.toAnigram model)
+          |> update (Selection <| Move { x = 10, y = 10 })
     AddFrame ->
       ( { model
         | frames =
@@ -50,6 +55,33 @@ update msg model =
       , Cmd.none)
     _ ->
       (model, Cmd.none)
+
+mergeAnigram : Model -> Anigram -> Model
+mergeAnigram model anigram =
+  let
+    oldIds = objectIds anigram.frames
+    newIds =
+      List.range 0 (List.length oldIds - 1)
+      |> List.map (\id -> id + List.length model.objects)
+    getNewId oldId =
+      List.elemIndex oldId oldIds
+        |> Maybe.andThen (\index -> List.getAt index newIds)
+        |> Maybe.withDefault -1
+    newObjects = List.map Objects.newState newIds
+    newFrames = List.map (Dict.mapKeys getNewId) anigram.frames
+    unselected = List.map (Objects.select False)
+  in
+    { model
+    | frames = mergeFrames model.frames newFrames
+    , objects = unselected model.objects ++ newObjects
+    }
+
+mergeFrames : List Frame -> List Frame -> List Frame
+mergeFrames baseFrames mergingFrames =
+  List.map2
+    Dict.union
+    baseFrames
+    mergingFrames
 
 updateChange : Change -> Model -> (Model, Cmd Msg)
 updateChange change model =

@@ -106,6 +106,7 @@ type Msg
   | SelectObject ObjectId
   | SelectAddObject ObjectId
   | DeselectAll
+  | Duplicate
   | DragDrop DragDrop.DragDrop
   | DragResize Corner DragDrop.DragDrop
   | AddFrame

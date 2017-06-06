@@ -21,6 +21,7 @@ model =
   , addObjectControl "Add Text" Icon.file_text <| Text "Add Text here"
   , buttonControl "Show" Icon.eye <| Selection <| Hide False 
   , buttonControl "Hide" Icon.eye_slash <| Selection <| Hide True
+  , buttonControl "Duplicate" Icon.copy Duplicate
   , colorControl 0 "Fill" Color.green FillSelector
   , colorControl 1 "Stroke" Color.grey StrokeSelector
   , buttonControl "Add Frame" Icon.plus_square AddFrame
