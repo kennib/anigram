@@ -17,6 +17,7 @@ import Anigram.Object as Objects
 import Anigram.Frames as Frames
 import Anigram.Controls as Ctrls
 import Anigram.Snapping as Snap
+import Anigram.History as History
 
 main =
   program
@@ -32,6 +33,7 @@ model =
   , frames = [ Frames.empty ]
   , frameIndex = 0
   , controls = Ctrls.model
+  , history = { past = [], future = [] }
   }
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -46,7 +48,8 @@ update msg model =
         |> Tuple.mapSecond Cmd.batch
   in
     batchUpdate
-      [ Ctrls.update
+      [ History.update
+      , Ctrls.update
       , Objects.update
       , Frames.update
       ]
@@ -89,6 +92,8 @@ keyboardSubscriptions : Sub Msg
 keyboardSubscriptions =
   Keyboard.downs <| \key ->
     case Keyboard.Key.fromCode key of
+      Keyboard.Key.Z -> Undo
+      Keyboard.Key.Y -> Redo
       Keyboard.Key.Delete -> Selection <| Hide True
       Keyboard.Key.Backspace -> Selection <| Hide True
       Keyboard.Key.Unknown 61 {- Plus -} -> Selection <| Hide False
