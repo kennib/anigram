@@ -87,11 +87,15 @@ subscriptions model =
 
 keyboardSubscriptions : Sub Msg
 keyboardSubscriptions =
-  Keyboard.presses <| \key ->
+  Keyboard.downs <| \key ->
     case Keyboard.Key.fromCode key of
       Keyboard.Key.Delete -> Selection <| Hide True
       Keyboard.Key.Backspace -> Selection <| Hide True
       Keyboard.Key.Unknown 61 {- Plus -} -> Selection <| Hide False
+      Keyboard.Key.Left  -> Selection <| Move { x = -1, y =  0 }
+      Keyboard.Key.Right -> Selection <| Move { x =  1, y =  0 }
+      Keyboard.Key.Up    -> Selection <| Move { x =  0, y = -1 }
+      Keyboard.Key.Down  -> Selection <| Move { x =  0, y =  1 }
       _ -> NoOp
 
 view : Model -> Html Msg
