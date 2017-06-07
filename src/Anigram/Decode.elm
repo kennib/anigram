@@ -43,10 +43,16 @@ decodeChange =
       "move" ->
         Json.map (Just << Move)
           (Json.field "position" decodePosition)
+      "moveTo" ->
+        Json.map (Just << MoveTo)
+          (Json.field "position" decodePosition)
       "resize" ->
         Json.map2 (\corner delta -> Just <| Resize corner delta)
           (Json.field "corner" decodeCorner)
           (Json.field "delta" decodePosition)
+      "sizeTo" ->
+        Json.map (Just << SizeTo)
+          (Json.field "size" decodeSize)
       "fill" ->
         Json.map (Just << Fill)
           (Json.field "color" decodeColor)
@@ -82,6 +88,12 @@ decodePosition =
   Json.map2 Position
     (Json.field "x" Json.int)
     (Json.field "y" Json.int)
+
+decodeSize : Json.Decoder Size
+decodeSize =
+  Json.map2 Size
+    (Json.field "width" Json.int)
+    (Json.field "height" Json.int)
 
 decodeCorner : Json.Decoder Corner
 decodeCorner =

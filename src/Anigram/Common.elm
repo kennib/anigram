@@ -54,6 +54,11 @@ type alias Position =
   , y : Int
   }
 
+type alias Size =
+  { width : Int
+  , height : Int
+  }
+
 type alias Corner = (XSide, YSide)
 type XSide = Left | Right
 type YSide = Top | Bottom
@@ -111,6 +116,7 @@ type Focus
 type  CursorMode
   = SelectMode
   | DragMode
+  | PlaceObjectMode ObjectType
 
 type alias History a =
   { past : List a
@@ -119,6 +125,7 @@ type alias History a =
 
 type Msg
   = AddObject ObjectType
+  | PlaceObject ObjectType Position
   | SelectObject ObjectId
   | SelectAddObject ObjectId
   | DeselectAll
@@ -144,7 +151,9 @@ type Change
   | Hide Bool
   | SetText String
   | Move Position
+  | MoveTo Position
   | Resize Corner Position
+  | SizeTo Size
   | Fill Color
   | Stroke Color
 

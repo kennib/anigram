@@ -4,6 +4,8 @@ import Dict
 import Dict.Extra as Dict
 import List.Extra as List
 
+import DragDrop
+
 import Html exposing (..)
 import Svg exposing (..)
 import Svg.Events exposing (..)
@@ -55,8 +57,18 @@ update msg model =
       ( { model | frameIndex = Basics.min (List.length model.frames - 1) <| model.frameIndex+1 }
       , Cmd.none )
     AddObject objectType ->
-      ( { model | objects = model.objects ++ [Objects.newState <| List.length model.objects] }
+      ( { model | cursorMode = PlaceObjectMode objectType }
+      , Cmd.none)
+    PlaceObject objectType position ->
+      ( { model
+        | objects = model.objects ++
+            [ (Objects.newState <| List.length model.objects)
+                |> Objects.setState (\state -> { state | dragResize = ((Right, Bottom), DragDrop.StartDrag position) })
+            ]
+        }
           |> addChangeToModelAt 0 (ChangeType objectType)
+          |> addChangeToModelAt 0 (MoveTo position)
+          |> addChangeToModelAt 0 (SizeTo { width = 0, height = 0 })
           |> addChangeToModelAt 0 (Hide True) 
           |> addChangeToModelAt model.frameIndex (Hide False)
       , Cmd.none)
@@ -133,13 +145,16 @@ reduceFrameChanges : Frame -> Frame
 reduceFrameChanges frame =
   let
     reduceObjectChanges objectId changes =
-      List.filter Change.isMove changes
-      ++ List.filter Change.isResize changes
+      []
       ++ getLastChange Change.isChangeType changes
       ++ getLastChange Change.isHide changes
       ++ getLastChange Change.isSetText changes
+      ++ getLastChange Change.isMoveTo changes
+      ++ getLastChange Change.isSizeTo changes
       ++ getLastChange Change.isFill changes
       ++ getLastChange Change.isStroke changes
+      ++ List.filter Change.isMove changes
+      ++ List.filter Change.isResize changes
 
     getLastChange predicate changes =
       List.reverse changes
@@ -194,7 +209,7 @@ viewFrame model index objects =
     , Attr.style <| if model.frameIndex == index then "border: 1px solid red" else "border: 1px solid black"
     , onClick <| SelectFrame index
     ]
-    <| List.map (\object -> Objects.unselectedView object.id object.style)
+    <| List.map (\object -> Objects.unselectedView SelectMode object.id object.style)
     <| objects
 
 getFrameObjects : Int -> List Frame -> List ObjectState -> Maybe (List Object)
@@ -267,6 +282,8 @@ applyChange change style =
     Hide state -> { style | hidden = state }
     SetText string -> { style | objectType = Text string }
     Move delta -> Objects.move delta style
+    MoveTo position -> { style | x = position.x, y = position.y }
     Resize corner delta -> Objects.resize corner delta style
+    SizeTo size -> { style | width = size.width, height = size.height }
     Fill color -> { style | fill = color }
     Stroke color -> { style | stroke = color }

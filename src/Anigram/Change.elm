@@ -26,10 +26,22 @@ isMove change =
     Move _ -> True
     _ -> False
 
+isMoveTo : Change -> Bool
+isMoveTo change =
+  case change of
+    MoveTo _ -> True
+    _ -> False
+
 isResize : Change -> Bool
 isResize change =
   case change of
     Resize _ _ -> True
+    _ -> False
+
+isSizeTo : Change -> Bool
+isSizeTo change =
+  case change of
+    SizeTo _ -> True
     _ -> False
 
 isFill : Change -> Bool

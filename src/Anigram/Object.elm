@@ -9,7 +9,7 @@ import Json.Decode as Json
 import Html exposing (Html, div, textarea)
 import Html.Attributes exposing (attribute, autofocus)
 import Html.Events exposing (onInput, onWithOptions, defaultOptions)
-import Html.Events.Extra exposing (onShiftMouseDown)
+import Html.Events.Extra exposing (onShiftMouseDown, onPositionMouseDown)
 import Svg exposing (..)
 import Svg.Events exposing (..)
 import Svg.Attributes as Attr exposing (..)
@@ -93,18 +93,26 @@ update msg model =
 view : Model -> List Object -> Html Msg
 view model objects =
   div
-    [ Attr.style <| "height: 100vh; flex-grow: 1; cursor: " ++ (if model.cursorMode == DragMode then "move" else "default") ++ ";"
+    [ Attr.style <| "height: 100vh; flex-grow: 1; cursor: "
+      ++ (case model.cursorMode of
+        DragMode -> "move"
+        PlaceObjectMode _ -> "crosshair"
+        _ -> "default"
+      ) ++ ";"
     ]
     [ div
       []
-      <| List.map (\object -> textEditView object.state object.style)
+      <| List.map (\object -> textEditView model.cursorMode object.state object.style)
       <| objects
     , svg
       [ width "100%"
       , height "100%"
       ] <|
       [ rect
-        [ onClick DeselectAll
+        [ onPositionMouseDown <| \pos ->
+          case model.cursorMode of
+            PlaceObjectMode objectType -> PlaceObject objectType pos
+            _ -> DeselectAll
         , fill "#00000000"
         , opacity "0"
         , width "10000"
@@ -113,7 +121,7 @@ view model objects =
         ]
         []
       ]
-      ++ List.map objectView objects
+      ++ List.map (objectView model.cursorMode) objects
     ]
 
 move : Position -> Style -> Style
@@ -236,21 +244,30 @@ selectClick id shiftClick =
   else
     SelectObject id
 
+onCursor cursorMode objectId =
+  case cursorMode of
+    SelectMode ->
+      onShiftMouseDown <| selectClick objectId
+    PlaceObjectMode objectType ->
+      onPositionMouseDown <| PlaceObject objectType
+    _ ->
+      attribute "none" ""
+
 flip object =
   transform <|
     (if object.width < 0 then "scale(-1 1) translate("++toString (-2*object.x)++" 0)" else "")
     ++
     (if object.height < 0 then "scale(1 -1) translate(0 "++toString (-2*object.y)++")" else "")
 
-objectView : Object -> Html Msg
-objectView object =
+objectView : CursorMode -> Object -> Html Msg
+objectView cursorMode object =
   if object.state.selected then
-    selectedView object.id object.style
+    selectedView cursorMode object.id object.style
   else
-    unselectedView object.id object.style
+    unselectedView cursorMode object.id object.style
 
-unselectedView : ObjectId -> Style -> Html Msg
-unselectedView objectId object =
+unselectedView : CursorMode -> ObjectId -> Style -> Html Msg
+unselectedView cursorMode objectId object =
   if not object.hidden then
     case object.objectType of
       Shape Circle ->
@@ -262,7 +279,7 @@ unselectedView objectId object =
           , flip object
           , fill <| "#" ++ colorToHex object.fill
           , stroke <| "#" ++ colorToHex object.stroke
-          , onShiftMouseDown <| selectClick objectId
+          , onCursor cursorMode objectId
           ]
           []
       Shape Square ->
@@ -274,7 +291,7 @@ unselectedView objectId object =
           , flip object
           , fill <| "#" ++ colorToHex object.fill
           , stroke <| "#" ++ colorToHex object.stroke
-          , onShiftMouseDown <| selectClick objectId
+          , onCursor cursorMode objectId
           ]
           []
       Arrow ->
@@ -312,7 +329,7 @@ unselectedView objectId object =
               , stroke <| "#" ++ colorToHex object.stroke
               , fill "none"
               , strokeWidth "3"
-              , onShiftMouseDown <| selectClick objectId
+              , onCursor cursorMode objectId
               ]
               [
               ]
@@ -327,14 +344,14 @@ unselectedView objectId object =
           , fontSize "12"
           , fontFamily "sans-serif"
           , Attr.cursor "text"
-          , onShiftMouseDown <| selectClick objectId
+          , onCursor cursorMode objectId
           ]
           [text string]
   else
     text ""
 
-textEditView : State -> Style -> Html Msg
-textEditView state object =
+textEditView : CursorMode -> State -> Style -> Html Msg
+textEditView cursorMode state object =
   case (object.objectType, state.selected) of
     (Text string, True) ->
       div
@@ -345,7 +362,7 @@ textEditView state object =
           , ("width", toString (abs object.width) ++ "px")
           , ("height", toString (abs object.height) ++ "px")
           ]
-        , onMouseDown (DragDrop <| PickedUp)
+        , onMouseDown <| if cursorMode == SelectMode then (DragDrop <| PickedUp) else NoOp
         , Attr.cursor "move"
         ]
         [ textarea
@@ -373,14 +390,14 @@ textEditView state object =
     _ ->
       text ""
 
-selectedView : ObjectId -> Style -> Html Msg
-selectedView id object =
+selectedView : CursorMode -> ObjectId -> Style -> Html Msg
+selectedView cursorMode id object =
   let
     cornerSvg corner pos =
       circle
         [ cx <| toString pos.x, cy <| toString pos.y, r "6"
         , fill "white", stroke "black"
-        , onMouseDown (DragResize corner <| PickedUp)
+        , onMouseDown <| if cursorMode == SelectMode then (DragDrop <| PickedUp) else NoOp
         ] []
     cornersSvg =
       List.map (\(corner, pos) -> cornerSvg corner pos) (corners object)
@@ -393,7 +410,7 @@ selectedView id object =
         , flip object
         , fill "#00000000"
         , opacity "0"
-        , onMouseDown (DragDrop <| PickedUp)
+        , onMouseDown <| if cursorMode == SelectMode then (DragDrop <| PickedUp) else NoOp
         ]
         []
   in
@@ -405,9 +422,9 @@ selectedView id object =
           text ""
         _ ->
           if not object.hidden then
-            unselectedView id object
+            unselectedView cursorMode id object
           else
-            faded <| unselectedView id object
+            faded <| unselectedView cursorMode id object
     , box
     ] ++ cornersSvg
 

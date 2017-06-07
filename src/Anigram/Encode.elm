@@ -52,11 +52,21 @@ encodeChange change =
         [ ( "change", Json.string "move" )
         , ( "position", encodePosition position )
         ]
+    MoveTo position ->
+      Json.object
+        [ ( "change", Json.string "moveTo" )
+        , ( "position", encodePosition position )
+        ]
     Resize corner position ->
       Json.object
         [ ( "change", Json.string "resize" )
         , ( "corner", encodeCorner corner )
         , ( "delta", encodePosition position )
+        ]
+    SizeTo size ->
+      Json.object
+        [ ( "change", Json.string "sizeTo" )
+        , ( "size", encodeSize size )
         ]
     Fill color ->
       Json.object
@@ -80,6 +90,13 @@ encodePosition position =
   Json.object
     [ ( "x", Json.int position.x )
     , ( "y", Json.int position.y )
+    ]
+
+encodeSize : Size -> Json.Value
+encodeSize size =
+  Json.object
+    [ ( "width", Json.int size.width )
+    , ( "height", Json.int size.height )
     ]
 
 encodeCorner : Corner -> Json.Value
