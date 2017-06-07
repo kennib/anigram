@@ -85,7 +85,7 @@ update msg model =
         (mapSelection (setDragDrop dragDrop) |> setCursorMode (if DragDrop.isDragged dragDrop then DragMode else SelectMode)
         , if DragDrop.isDropped dragDrop then Cmd.message <| Selection <| Move <| DragDrop.delta dragDrop else Cmd.none)
       DragResize corner dragDrop ->
-        (mapSelection (setDragResize corner dragDrop) |> setCursorMode (if DragDrop.isDragged dragDrop then DragMode else SelectMode)
+        (mapSelection (setDragResize corner dragDrop) |> setCursorMode (if DragDrop.isDragged dragDrop then DragResizeMode corner else SelectMode)
         , if DragDrop.isDropped dragDrop then Cmd.message <| Selection <| Resize corner <| DragDrop.delta dragDrop else Cmd.none)
       _ ->
         (model, Cmd.none)
@@ -96,6 +96,12 @@ view model objects =
     [ Attr.style <| "height: 100vh; flex-grow: 1; cursor: "
       ++ (case model.cursorMode of
         DragMode -> "move"
+        DragResizeMode corner ->
+          case corner of
+            (Left , Top   ) -> "nw-resize"
+            (Left , Bottom) -> "sw-resize"
+            (Right, Top   ) -> "ne-resize"
+            (Right, Bottom) -> "se-resize"
         PlaceObjectMode _ -> "crosshair"
         _ -> "default"
       ) ++ ";"

@@ -116,6 +116,7 @@ type Focus
 type  CursorMode
   = SelectMode
   | DragMode
+  | DragResizeMode Corner
   | PlaceObjectMode ObjectType
 
 type alias History a =
