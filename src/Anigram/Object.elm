@@ -70,6 +70,7 @@ update msg model =
       | objects = List.map (select False) model.objects
       , focus = ObjectArea
       }
+    setCursorMode mode model = { model | cursorMode = mode }
   in
     case msg of
       AddObject _ ->
@@ -81,18 +82,18 @@ update msg model =
       DeselectAll ->
         (unselectAll model, Cmd.none)
       DragDrop dragDrop ->
-        (mapSelection (setDragDrop dragDrop)
+        (mapSelection (setDragDrop dragDrop) |> setCursorMode (if DragDrop.isDragged dragDrop then DragMode else SelectMode)
         , if DragDrop.isDropped dragDrop then Cmd.message <| Selection <| Move <| DragDrop.delta dragDrop else Cmd.none)
       DragResize corner dragDrop ->
-        (mapSelection (setDragResize corner dragDrop)
+        (mapSelection (setDragResize corner dragDrop) |> setCursorMode (if DragDrop.isDragged dragDrop then DragMode else SelectMode)
         , if DragDrop.isDropped dragDrop then Cmd.message <| Selection <| Resize corner <| DragDrop.delta dragDrop else Cmd.none)
       _ ->
         (model, Cmd.none)
 
-view : List Object -> Html Msg
-view objects =
+view : Model -> List Object -> Html Msg
+view model objects =
   div
-    [ Attr.style "height: 100vh; flex-grow: 1;"
+    [ Attr.style <| "height: 100vh; flex-grow: 1; cursor: " ++ (if model.cursorMode == DragMode then "move" else "default") ++ ";"
     ]
     [ div
       []
@@ -273,7 +274,6 @@ unselectedView objectId object =
           , flip object
           , fill <| "#" ++ colorToHex object.fill
           , stroke <| "#" ++ colorToHex object.stroke
-          , Attr.cursor "move"
           , onShiftMouseDown <| selectClick objectId
           ]
           []

@@ -96,6 +96,7 @@ type alias Model =
   , frameIndex : Int
   , controls : List (Control Msg)
   , focus : Focus
+  , cursorMode : CursorMode
   , history : History (List Frame, List ObjectState)
   }
 
@@ -106,6 +107,10 @@ type alias Anigram =
 type Focus
   = ObjectArea
   | FrameArea
+
+type  CursorMode
+  = SelectMode
+  | DragMode
 
 type alias History a =
   { past : List a

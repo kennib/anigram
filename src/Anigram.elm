@@ -34,6 +34,7 @@ model =
   , frameIndex = 0
   , controls = Ctrls.model
   , focus = ObjectArea
+  , cursorMode = SelectMode
   , history = { past = [], future = [] }
   }
 
@@ -125,7 +126,7 @@ anigramView model =
       [ ("display", "flex")
       ]
     ]
-    [ Objects.view
+    [ Objects.view model
       <| Maybe.withDefault []
       <| Frames.getFrameObjects model.frameIndex model.frames model.objects
     , Frames.view model
