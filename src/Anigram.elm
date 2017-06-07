@@ -33,6 +33,7 @@ model =
   , frames = [ Frames.empty ]
   , frameIndex = 0
   , controls = Ctrls.model
+  , focus = ObjectArea
   , history = { past = [], future = [] }
   }
 
@@ -85,22 +86,24 @@ subscriptions model =
           ]
       _ ->
         Sub.batch
-          [ keyboardSubscriptions
+          [ keyboardSubscriptions model
           ]
 
-keyboardSubscriptions : Sub Msg
-keyboardSubscriptions =
+keyboardSubscriptions : Model -> Sub Msg
+keyboardSubscriptions model =
   Keyboard.downs <| \key ->
-    case Keyboard.Key.fromCode key of
-      Keyboard.Key.Z -> Undo
-      Keyboard.Key.Y -> Redo
-      Keyboard.Key.Delete -> Selection <| Hide True
-      Keyboard.Key.Backspace -> Selection <| Hide True
-      Keyboard.Key.Unknown 61 {- Plus -} -> Selection <| Hide False
-      Keyboard.Key.Left  -> Selection <| Move { x = -1, y =  0 }
-      Keyboard.Key.Right -> Selection <| Move { x =  1, y =  0 }
-      Keyboard.Key.Up    -> Selection <| Move { x =  0, y = -1 }
-      Keyboard.Key.Down  -> Selection <| Move { x =  0, y =  1 }
+    case (model.focus, Keyboard.Key.fromCode key) of
+      (_, Keyboard.Key.Z) -> Undo
+      (_, Keyboard.Key.Y) -> Redo
+      (ObjectArea, Keyboard.Key.Delete) -> Selection <| Hide True
+      (ObjectArea, Keyboard.Key.Backspace) -> Selection <| Hide True
+      (ObjectArea, Keyboard.Key.Unknown 61 {- Plus -}) -> Selection <| Hide False
+      (ObjectArea, Keyboard.Key.Left)  -> Selection <| Move { x = -1, y =  0 }
+      (ObjectArea, Keyboard.Key.Right) -> Selection <| Move { x =  1, y =  0 }
+      (ObjectArea, Keyboard.Key.Up)    -> Selection <| Move { x =  0, y = -1 }
+      (ObjectArea, Keyboard.Key.Down)  -> Selection <| Move { x =  0, y =  1 }
+      (FrameArea, Keyboard.Key.Up)    -> PreviousFrame
+      (FrameArea, Keyboard.Key.Down)  -> NextFrame
       _ -> NoOp
 
 view : Model -> Html Msg

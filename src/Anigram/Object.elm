@@ -21,6 +21,7 @@ import Color exposing (Color)
 import ColorMath exposing (colorToHex)
 
 import Anigram.Common exposing (..)
+import Anigram.Selection as Selection
 
 defaultStyle : Style
 defaultStyle =
@@ -48,17 +49,27 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   let
     mapSelection function =
-      { model | objects = List.updateIf (.state >> .selected) function model.objects }
+      { model
+      | objects = List.updateIf (.state >> .selected) function model.objects
+      , focus = ObjectArea
+      }
     setSelection id model =
       { model
       | objects =
             List.map (select False >> setDragDrop Unselected) model.objects
          |> List.updateIf (\object -> object.id == id) (select True >> setDragDrop PickedUp)
+      , focus = ObjectArea
       }
     addSelection id model =
-      { model | objects = List.updateIf (\object -> object.id == id) (select True >> setDragDrop PickedUp) model.objects }
+      { model
+      | objects = List.updateIf (\object -> object.id == id) (select True >> setDragDrop PickedUp) model.objects
+      , focus = ObjectArea
+      }
     unselectAll model =
-      { model | objects = List.map (select False) model.objects }
+      { model
+      | objects = List.map (select False) model.objects
+      , focus = ObjectArea
+      }
   in
     case msg of
       AddObject _ ->
@@ -81,7 +92,8 @@ update msg model =
 view : List Object -> Html Msg
 view objects =
   div
-    [ Attr.style "height: 100vh; flex-grow: 1;" ]
+    [ Attr.style "height: 100vh; flex-grow: 1;"
+    ]
     [ div
       []
       <| List.map (\object -> textEditView object.state object.style)

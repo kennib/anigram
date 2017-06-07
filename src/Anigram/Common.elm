@@ -95,12 +95,17 @@ type alias Model =
   , frames : List Frame
   , frameIndex : Int
   , controls : List (Control Msg)
+  , focus : Focus
   , history : History (List Frame, List ObjectState)
   }
 
 type alias Anigram =
   { frames : List Frame
   }
+
+type Focus
+  = ObjectArea
+  | FrameArea
 
 type alias History a =
   { past : List a
@@ -119,6 +124,8 @@ type Msg
   | DragResize Corner DragDrop.DragDrop
   | AddFrame
   | SelectFrame Int
+  | PreviousFrame
+  | NextFrame
   | SaveAnigram
   | AnigramSaved
   | LoadAnigram

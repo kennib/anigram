@@ -42,10 +42,17 @@ update msg model =
           ++ [ Dict.empty ]
           ++ List.drop (model.frameIndex+1) model.frames
         , frameIndex = model.frameIndex+1
+        , focus = FrameArea
         }
       , Cmd.none)
     SelectFrame index ->
-      ( { model | frameIndex = index }
+      ( { model | frameIndex = index, focus = FrameArea }
+      , Cmd.none )
+    PreviousFrame ->
+      ( { model | frameIndex = Basics.max 0 <| model.frameIndex-1 }
+      , Cmd.none )
+    NextFrame ->
+      ( { model | frameIndex = Basics.min (List.length model.frames - 1) <| model.frameIndex+1 }
       , Cmd.none )
     AddObject objectType ->
       ( { model | objects = model.objects ++ [Objects.newState <| List.length model.objects] }
