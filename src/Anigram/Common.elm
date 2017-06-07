@@ -129,6 +129,7 @@ type Msg
   | PlaceObject ObjectType Position
   | SelectObject ObjectId
   | SelectAddObject ObjectId
+  | SetCursor CursorMode
   | DeselectAll
   | Duplicate
   | Undo

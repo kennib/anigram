@@ -97,6 +97,8 @@ update msg model =
         _ -> control
   in
     case msg of
+      SetCursor mode ->
+        ({ model | cursorMode = mode }, Cmd.none)
       SaveAnigram ->
         (model, Store.saveAnigram { frames = model.frames })
       LoadAnigram ->

@@ -96,6 +96,7 @@ keyboardSubscriptions model =
     case (model.focus, Keyboard.Key.fromCode key) of
       (_, Keyboard.Key.Z) -> Undo
       (_, Keyboard.Key.Y) -> Redo
+      (ObjectArea, Keyboard.Key.Escape) -> SetCursor SelectMode 
       (ObjectArea, Keyboard.Key.Delete) -> Selection <| Hide True
       (ObjectArea, Keyboard.Key.Backspace) -> Selection <| Hide True
       (ObjectArea, Keyboard.Key.Unknown 61 {- Plus -}) -> Selection <| Hide False
