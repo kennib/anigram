@@ -362,6 +362,7 @@ textEditView state object =
             , ("opacity", if object.hidden then "0.2" else "1")
             ]
           , autofocus True
+          , Html.Attributes.attribute "onfocus" "this.select()" -- This is kind of cheating, but is the least nasty of several options
           , onInput (Selection << SetText)
           , onWithOptions "keydown" { defaultOptions | stopPropagation = True } <| Json.succeed NoOp -- prevent Delete/Ctrl A/etc from affecting the rest of the Anigram
           , onWithOptions "mousedown" { defaultOptions | stopPropagation = True } <| Json.succeed NoOp -- prevent mouse selection from dragging the text box
