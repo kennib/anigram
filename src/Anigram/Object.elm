@@ -8,7 +8,7 @@ import Json.Decode as Json
 
 import Html exposing (Html, div, textarea)
 import Html.Attributes exposing (attribute, autofocus)
-import Html.Events exposing (onInput)
+import Html.Events exposing (onInput, onWithOptions, defaultOptions)
 import Html.Events.Extra exposing (onShiftMouseDown)
 import Svg exposing (..)
 import Svg.Events exposing (..)
@@ -363,6 +363,8 @@ textEditView state object =
             ]
           , autofocus True
           , onInput (Selection << SetText)
+          , onWithOptions "keydown" { defaultOptions | stopPropagation = True } <| Json.succeed NoOp -- prevent Delete/Ctrl A/etc from affecting the rest of the Anigram
+          , onWithOptions "mousedown" { defaultOptions | stopPropagation = True } <| Json.succeed NoOp -- prevent mouse selection from dragging the text box
           ]
           [ text string
           ]
@@ -383,10 +385,10 @@ selectedView id object =
       List.map (\(corner, pos) -> cornerSvg corner pos) (corners object)
     box =
       rect
-        [ x <| toString object.x
-        , y <| toString object.y
-        , width <| toString <| abs object.width
-        , height <| toString <| abs object.height
+        [ x <| toString <| object.x - 10
+        , y <| toString <| object.y - 10
+        , width <| toString <| abs object.width + 20
+        , height <| toString <| abs object.height + 20
         , flip object
         , fill "#00000000"
         , opacity "0"
