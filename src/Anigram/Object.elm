@@ -397,7 +397,7 @@ selectedView cursorMode id object =
       circle
         [ cx <| toString pos.x, cy <| toString pos.y, r "6"
         , fill "white", stroke "black"
-        , onMouseDown <| if cursorMode == SelectMode then (DragDrop <| PickedUp) else NoOp
+        , onMouseDown <| if cursorMode == SelectMode then (DragResize corner <| PickedUp) else NoOp
         ] []
     cornersSvg =
       List.map (\(corner, pos) -> cornerSvg corner pos) (corners object)
