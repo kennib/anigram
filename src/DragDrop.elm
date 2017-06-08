@@ -42,6 +42,12 @@ mapDragged function dragDrop =
   else
     dragDrop
 
+mapDropped function dragDrop =
+  if isDropped dragDrop then
+    function dragDrop
+  else
+    dragDrop
+
 mapEnd function dragDrop =
     case dragDrop of
       Drag start end -> Drag start <| function end

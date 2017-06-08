@@ -83,7 +83,7 @@ subscriptions model =
       (_, Just dragDrop) ->
         Sub.batch
           [ Mouse.moves <| \pos -> DragDrop <| DragDrop.drag dragDrop pos
-          , Mouse.ups <| \pos -> DragDrop <| DragDrop.mapDragged snap <| DragDrop.drop <| DragDrop.drag dragDrop pos
+          , Mouse.ups <| \pos -> DragDrop <| DragDrop.mapDropped snap <| DragDrop.drop <| DragDrop.drag dragDrop pos
           ]
       _ ->
         Sub.none

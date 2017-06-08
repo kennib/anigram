@@ -31,7 +31,7 @@ snapDragDrop objects snappingObjects =
 snap : List SnapLine -> List SnapLine -> Position -> Position
 snap snapLines snappedLines pos =
   let
-    dist = 20
+    dist = 10
     snaps =
       List.lift2 (,)
         snappedLines 
