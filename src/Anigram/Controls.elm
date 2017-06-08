@@ -120,7 +120,8 @@ update msg model =
 view model =
   nav
     [ style
-      [ ("padding", "5px")
+      [ ("position", "absolute")
+      , ("padding", "5px")
       , ("background-color", "#333")
       ]
     ]
