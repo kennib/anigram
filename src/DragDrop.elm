@@ -30,6 +30,19 @@ drop dragDrop =
     Drag start end -> Drop start end
     Drop start end -> Drop start end
 
+start dragDrop =
+  case dragDrop of
+    StartDrag start -> start
+    Drag start end -> start
+    Drop start end -> start
+    _ -> { x = 0, y = 0 }
+
+startend dragDrop =
+  case dragDrop of
+    Drag start end -> Just (start, end)
+    Drop start end -> Just (start, end)
+    _ -> Nothing
+
 delta dragDrop =
   case dragDrop of
     Drag start end -> { x = end.x - start.x, y = end.y - start.y }

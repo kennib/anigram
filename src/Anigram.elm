@@ -74,13 +74,18 @@ subscriptions model =
         (Frames.getFrameObjectsWithoutState model.frameIndex model.frames model.objects |> Maybe.withDefault [])
         (Objects.selectedIds model.objects)
   in
-    case (dragResizes, dragDrops) of
-      (Just (corner, dragDrop), _) ->
+    case (model.cursorMode, dragResizes, dragDrops) of
+      (DragSelectMode dragDrop, _, _) ->
+        Sub.batch
+          [ Mouse.moves <| \pos -> SetCursor <| DragSelectMode <| DragDrop.drag dragDrop pos
+          , Mouse.ups   <| \pos -> Maybe.withDefault NoOp <| Maybe.map (uncurry DragSelect) <| DragDrop.startend <| DragDrop.drop <| DragDrop.drag dragDrop pos
+          ]
+      (_, Just (corner, dragDrop), _) ->
         Sub.batch
           [ Mouse.moves <| \pos -> DragResize corner <| DragDrop.drag dragDrop pos
           , Mouse.ups <| \pos -> uncurry DragResize <| curry snapResize corner <| DragDrop.drop <| DragDrop.drag dragDrop pos
           ]
-      (_, Just dragDrop) ->
+      (_, _, Just dragDrop) ->
         Sub.batch
           [ Mouse.moves <| \pos -> DragDrop <| DragDrop.drag dragDrop pos
           , Mouse.ups <| \pos -> DragDrop <| DragDrop.mapDropped snap <| DragDrop.drop <| DragDrop.drag dragDrop pos

@@ -32,6 +32,20 @@ objectIds frames =
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
+    DragSelect start end ->
+        let
+          objects = getFrameObjects model.frameIndex model.frames model.objects |> Maybe.withDefault []
+          inBounds start end object =
+            (  start.x < end.x && object.x > start.x && object.x+object.width < end.x
+            || start.x > end.x && object.x < start.x && object.x+object.width > end.x
+            ) &&
+            (  start.y < end.y && object.y > start.y && object.y+object.height < end.y
+            || start.y > end.y && object.y < start.y && object.y+object.height > end.y
+            )
+          selectInBounds start end objectState object =
+            Objects.select (inBounds start end object.style) objectState
+        in
+          ({ model | objects = List.map2 (selectInBounds start end) model.objects objects, cursorMode = SelectMode }, Cmd.none)
     Selection action ->
       updateChange action model
     Duplicate ->

@@ -116,6 +116,7 @@ type Focus
 
 type  CursorMode
   = SelectMode
+  | DragSelectMode DragDrop.DragDrop
   | DragMode
   | DragResizeMode Corner
   | PlaceObjectMode ObjectType
@@ -131,6 +132,7 @@ type Msg
   | SelectObject ObjectId
   | SelectAddObject ObjectId
   | SetCursor CursorMode
+  | DragSelect Position Position
   | DeselectAll
   | SelectAll
   | Duplicate

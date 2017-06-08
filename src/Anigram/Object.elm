@@ -9,7 +9,7 @@ import Json.Decode as Json
 import Html exposing (Html, div, textarea)
 import Html.Attributes exposing (attribute, autofocus)
 import Html.Events exposing (onInput, onWithOptions, defaultOptions)
-import Html.Events.Extra exposing (onShiftMouseDown, onPositionMouseDown)
+import Html.Events.Extra exposing (onShiftMouseDown, onPositionMouseDown, onPositionMouseUp, onPositionMouseMove)
 import Svg exposing (..)
 import Svg.Events exposing (..)
 import Svg.Attributes as Attr exposing (..)
@@ -120,19 +120,50 @@ view model objects =
       , height "100%"
       ] <|
       [ rect
-        [ onPositionMouseDown <| \pos ->
-          case model.cursorMode of
-            PlaceObjectMode objectType -> PlaceObject objectType pos
-            _ -> DeselectAll
-        , fill "#00000000"
-        , opacity "0"
-        , width "10000"
-        , height "10000"
-        , stroke "none"
-        ]
+        ( ( case model.cursorMode of
+              PlaceObjectMode objectType ->
+                [ onPositionMouseDown <| \pos -> PlaceObject objectType pos ]
+              _ ->
+                [ onPositionMouseDown <| \pos -> SetCursor <| DragSelectMode <| StartDrag pos ]
+          ) ++
+          [ fill "#00000000"
+          , opacity "0"
+          , width "10000"
+          , height "10000"
+          , stroke "none"
+          ]
+        )
         []
       ]
-      ++ List.map (objectView model.cursorMode) objects
+      ++ List.map (objectView model.cursorMode) objects ++
+      [ case model.cursorMode of
+        DragSelectMode dragDrop ->
+          case DragDrop.startend dragDrop of
+            Just (start, end) ->
+              let
+                pos =
+                  { x = Basics.min start.x end.x
+                  , y = Basics.min start.y end.y
+                  }
+                size =
+                  { x = (Basics.max start.x end.x) - pos.x
+                  , y = (Basics.max start.y end.y) - pos.y
+                  }
+              in
+                  rect
+                    [ fill "blue"
+                    , opacity "0.2"
+                    , stroke "none"
+                    , x <| toString pos.x
+                    , y <| toString pos.y
+                    , width <| toString size.x
+                    , height <| toString size.y
+                    ]
+                    []
+            Nothing ->
+              text ""
+        _ -> text ""
+      ]
     ]
 
 move : Position -> Style -> Style

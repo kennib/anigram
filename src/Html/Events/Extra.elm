@@ -1,6 +1,8 @@
 module Html.Events.Extra exposing
   ( onShiftMouseDown
   , onPositionMouseDown
+  , onPositionMouseUp
+  , onPositionMouseMove
   , onComboKeyDown
   )
 
@@ -23,6 +25,18 @@ onShiftMouseDown msg =
 onPositionMouseDown : (Position -> msg) -> Attribute msg
 onPositionMouseDown msg =
   on "mousedown"
+    <| Json.map msg
+    <| positionDecode
+
+onPositionMouseUp : (Position -> msg) -> Attribute msg
+onPositionMouseUp msg =
+  on "mouseup"
+    <| Json.map msg
+    <| positionDecode
+
+onPositionMouseMove : (Position -> msg) -> Attribute msg
+onPositionMouseMove msg =
+  on "mousemove"
     <| Json.map msg
     <| positionDecode
 
