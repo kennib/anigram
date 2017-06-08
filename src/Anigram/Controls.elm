@@ -18,6 +18,7 @@ model =
   [ addObjectControl "Add a Circle" Icon.circle <| Shape Circle
   , addObjectControl "Add a Square" Icon.square <| Shape Square
   , addObjectControl "Add an Arrow" Icon.long_arrow_right <| Arrow
+  , addObjectControl "Add an Arc Arrow" Icon.reply <| ArcArrow 100
   , addObjectControl "Add Text" Icon.file_text <| Text "Add Text here"
   , buttonControl "Show" Icon.eye <| Selection <| Hide False 
   , buttonControl "Hide" Icon.eye_slash <| Selection <| Hide True

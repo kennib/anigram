@@ -10,6 +10,7 @@
     "dependencies": {
         "Kinto/elm-kinto": "4.0.0 <= v < 5.0.0",
         "SwiftsNamesake/proper-keyboard": "3.0.1 <= v < 4.0.0",
+        "Zinggi/elm-webgl-math": "1.0.5 <= v < 2.0.0",
         "danielnarey/elm-color-math": "1.0.3 <= v < 2.0.0",
         "elm-community/dict-extra": "2.1.0 <= v < 3.0.0",
         "elm-community/list-extra": "6.1.0 <= v < 7.0.0",

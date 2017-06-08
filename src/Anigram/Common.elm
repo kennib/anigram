@@ -44,6 +44,7 @@ type ObjectType
   = Shape ShapeType
   | Text String
   | Arrow
+  | ArcArrow Float
 
 type ShapeType
   = Circle

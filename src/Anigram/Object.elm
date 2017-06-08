@@ -20,6 +20,8 @@ import Cmd
 import Color exposing (Color)
 import ColorMath exposing (colorToHex)
 
+import Vector2 as Vec2 exposing (Vec2)
+
 import Anigram.Common exposing (..)
 import Anigram.Selection as Selection
 
@@ -231,6 +233,12 @@ corners object =
         [ { x = object.x, y = object.y }
         , { x = object.x+object.width, y = object.y+object.height }
         ]
+    ArcArrow _ ->
+      List.map2 (,)
+        [(Left, Top), (Right, Bottom)]
+        [ { x = object.x, y = object.y }
+        , { x = object.x+object.width, y = object.y+object.height }
+        ]
     _ ->
       List.map2 (,)
         [(Left, Top), (Right, Top), (Right, Bottom), (Left, Bottom)]
@@ -304,45 +312,21 @@ unselectedView cursorMode objectId object =
           ]
           []
       Arrow ->
-        let
-          linePath =
-            subpath
-              (startAt (toFloat <| object.x, toFloat <| object.y)) open
-              [ lineTo (toFloat <| object.x + abs object.width, toFloat <| object.y + abs object.height)
-              ]
-          trianglePath = "M0,0 V6 L3,3 Z"
-        in
-          g
-            []
-            [ defs
-              []
-              [ marker
-                [ id <| "head-"++toString objectId
-                , orient "auto"
-                , markerWidth "4"
-                , markerHeight "8"
-                , refX "2.5"
-                , refY "3"
-                ]
-                [ Svg.path
-                  [ d <| trianglePath
-                  , fill <| "#" ++ colorToHex object.stroke
-                  ]
-                  []
-                ]
-              ]
-            , Svg.path
-              [ d <| pathToString [linePath]
-              , flip object
-              , attribute "marker-end" <| "url(#head-"++toString objectId++")"
-              , stroke <| "#" ++ colorToHex object.stroke
-              , fill "none"
-              , strokeWidth "3"
-              , onCursor cursorMode objectId
-              ]
-              [
-              ]
+        arrowView cursorMode objectId object
+          <| \startVec lengthVec ->
+            [ lineTo (startVec |> Vec2.add lengthVec)
             ]
+      ArcArrow radius ->
+        let
+          orthogonal (x, y) = (y, -x)
+          orthogonalVec lengthVec = lengthVec |> orthogonal |> Vec2.normalize |> Vec2.scale radius
+        in
+          arrowView cursorMode objectId object
+            <| \startVec lengthVec ->
+              [ quadraticTo
+                (startVec |> Vec2.add (lengthVec |> Vec2.divideBy 2) |> Vec2.add (orthogonalVec lengthVec))
+                (startVec |> Vec2.add lengthVec)
+              ]
       Text string ->
         text_
           [ x <| toString object.x
@@ -358,6 +342,46 @@ unselectedView cursorMode objectId object =
           [text string]
   else
     text ""
+
+arrowView : CursorMode -> ObjectId -> Style -> (Vec2.Float2 -> Vec2.Float2 -> List Instruction) -> Svg Msg
+arrowView cursorMode objectId object path =
+  let
+    lengthVec = (toFloat <| abs object.width, toFloat <| abs object.height)
+    startVec = (toFloat object.x, toFloat object.y)
+    linePath = subpath (startAt startVec) open <| path startVec lengthVec
+    trianglePath = "M0,0 V6 L3,3 Z"
+  in
+    g
+      []
+      [ defs
+        []
+        [ marker
+          [ id <| "head-"++toString objectId
+          , orient "auto"
+          , markerWidth "4"
+          , markerHeight "8"
+          , refX "2.5"
+          , refY "3"
+          ]
+          [ Svg.path
+            [ d <| trianglePath
+            , fill <| "#" ++ colorToHex object.stroke
+            ]
+            []
+          ]
+        ]
+      , Svg.path
+        [ d <| pathToString [linePath]
+        , flip object
+        , attribute "marker-end" <| "url(#head-"++toString objectId++")"
+        , stroke <| "#" ++ colorToHex object.stroke
+        , fill "none"
+        , strokeWidth "3"
+        , onCursor cursorMode objectId
+        ]
+        [
+        ]
+      ]
 
 textEditView : CursorMode -> State -> Style -> Html Msg
 textEditView cursorMode state object =
