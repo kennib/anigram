@@ -3,12 +3,12 @@ module Anigram exposing (..)
 import List.Extra as List
 
 import Mouse
-import Keyboard
-import Keyboard.Key
 import DragDrop
+import Keyboard.Key exposing (Key)
 
 import Html exposing (Html, program, div)
-import Html.Attributes exposing (style)
+import Html.Attributes exposing (style, tabindex)
+import Html.Events.Extra exposing (onComboKeyDown)
 
 import Color exposing (Color)
 
@@ -86,27 +86,33 @@ subscriptions model =
           , Mouse.ups <| \pos -> DragDrop <| DragDrop.mapDragged snap <| DragDrop.drop <| DragDrop.drag dragDrop pos
           ]
       _ ->
-        Sub.batch
-          [ keyboardSubscriptions model
-          ]
+        Sub.none
 
-keyboardSubscriptions : Model -> Sub Msg
-keyboardSubscriptions model =
-  Keyboard.downs <| \key ->
-    case (model.focus, Keyboard.Key.fromCode key) of
-      (_, Keyboard.Key.Z) -> Undo
-      (_, Keyboard.Key.Y) -> Redo
-      (ObjectArea, Keyboard.Key.Escape) -> SetCursor SelectMode 
-      (ObjectArea, Keyboard.Key.Delete) -> Selection <| Hide True
-      (ObjectArea, Keyboard.Key.Backspace) -> Selection <| Hide True
-      (ObjectArea, Keyboard.Key.Unknown 61 {- Plus -}) -> Selection <| Hide False
-      (ObjectArea, Keyboard.Key.Left)  -> Selection <| Move { x = -1, y =  0 }
-      (ObjectArea, Keyboard.Key.Right) -> Selection <| Move { x =  1, y =  0 }
-      (ObjectArea, Keyboard.Key.Up)    -> Selection <| Move { x =  0, y = -1 }
-      (ObjectArea, Keyboard.Key.Down)  -> Selection <| Move { x =  0, y =  1 }
-      (FrameArea, Keyboard.Key.Up)    -> PreviousFrame
-      (FrameArea, Keyboard.Key.Down)  -> NextFrame
-      _ -> NoOp
+keyboardCombo : Model -> (Bool, Bool, Key) -> Msg
+keyboardCombo model (ctrl, shift, key) =
+  case model.focus of
+    ObjectArea ->
+      case (ctrl, shift, key) of
+        (True, False, Keyboard.Key.Z) -> Undo
+        (True, True, Keyboard.Key.Z) -> Redo
+        (True, False, Keyboard.Key.Y) -> Redo
+        (_, _, Keyboard.Key.Escape) -> SetCursor SelectMode
+        (_, _, Keyboard.Key.Delete) -> Selection <| Hide True
+        (_, _, Keyboard.Key.Backspace) -> Selection <| Hide True
+        (_, _, Keyboard.Key.Unknown 61 {- Plus -}) -> Selection <| Hide False
+        (_, _, Keyboard.Key.Left)  -> Selection <| Move { x = -1, y =  0 }
+        (_, _, Keyboard.Key.Right) -> Selection <| Move { x =  1, y =  0 }
+        (_, _, Keyboard.Key.Up)    -> Selection <| Move { x =  0, y = -1 }
+        (_, _, Keyboard.Key.Down)  -> Selection <| Move { x =  0, y =  1 }
+        _ -> NoOp
+    FrameArea ->
+      case (ctrl, shift, key) of
+        (True, False, Keyboard.Key.Z) -> Undo
+        (True, True, Keyboard.Key.Z) -> Redo
+        (True, False, Keyboard.Key.Y) -> Redo
+        (_, _, Keyboard.Key.Up)    -> PreviousFrame
+        (_, _, Keyboard.Key.Down)  -> NextFrame
+        _ -> NoOp
 
 view : Model -> Html Msg
 view model =
@@ -115,6 +121,8 @@ view model =
       [ ("height", "100vh")
       , ("overflow", "hidden")
       ]
+    , tabindex 1 -- Allows us to capture keyboard events
+    , onComboKeyDown (keyboardCombo model)
     ]
     [ Ctrls.view model
     , anigramView model
