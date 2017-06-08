@@ -65,18 +65,41 @@ decodeChange =
 
 decodeObjectType : Json.Decoder ObjectType
 decodeObjectType =
-  Json.string
-  |> Json.map (\objectType ->
+  Json.field "type" Json.string
+  |> Json.andThen (\objectType ->
     case objectType of
-      "Shape Circle" -> Shape Circle
-      "Shape Square" -> Shape Square
-      "Arrow" -> Arrow
-      text -> 
-        if String.startsWith "Text " text then
-          Text <| String.dropLeft 6 <| String.dropRight 1 <| text
-        else
-          Text text
+      "shape" ->
+        Json.map Shape
+          (Json.field "shape" decodeShape)
+      "text" ->
+        Json.map2 Text
+          (Json.field "text" Json.string)
+          (Json.field "style" decodeTextStyle)
+      "arrow" ->
+        Json.succeed Arrow
+      "arcArrow" ->
+        Json.map ArcArrow
+          (Json.field "radius" Json.float)
+      otherType ->
+        Json.fail <| otherType ++ " is not a type of object"
   )
+
+decodeShape : Json.Decoder ShapeType
+decodeShape =
+  Json.string
+  |> Json.andThen (\shape ->
+    case shape of
+      "Square" -> Json.succeed Square
+      "Circle" -> Json.succeed Circle
+      otherShape -> Json.fail <| otherShape ++ " is not a valid shape"
+  )
+
+decodeTextStyle : Json.Decoder TextStyle
+decodeTextStyle =
+  Json.map3 TextStyle
+    (Json.field "size" Json.int)
+    (Json.field "font" Json.string)
+    (Json.field "color" decodeColor)
 
 decodeColor : Json.Decoder Color
 decodeColor =

@@ -37,8 +37,15 @@ defaultStyle =
   , stroke = Color.black
   }
 
-newState : ObjectId -> ObjectState 
-newState id = 
+defaultTextStyle : TextStyle
+defaultTextStyle =
+  { size = 16
+  , font = "sans-serif"
+  , color = Color.black
+  }
+
+newState : ObjectId -> ObjectState
+newState id =
   { id = id
   , state =
     { selected = True
@@ -288,7 +295,7 @@ noInteraction =
 
 selectClick id shiftClick =
   if shiftClick then
-    SelectAddObject id 
+    SelectAddObject id
   else
     SelectObject id
 
@@ -358,15 +365,16 @@ unselectedView cursorMode objectId object =
                 (startVec |> Vec2.add (lengthVec |> Vec2.divideBy 2) |> Vec2.add (orthogonalVec lengthVec))
                 (startVec |> Vec2.add lengthVec)
               ]
-      Text string ->
+      Text string style ->
         text_
           [ x <| toString object.x
           , y <| toString object.y
           , dx "2"
-          , dy "12"
+          , dy <| toString style.size
           , flip object
-          , fontSize "12"
-          , fontFamily "sans-serif"
+          , fontSize <| toString style.size ++ "px"
+          , fontFamily style.font
+          , fill <| "#" ++ colorToHex style.color
           , Attr.cursor "text"
           , onCursor cursorMode objectId
           ]
@@ -417,7 +425,7 @@ arrowView cursorMode objectId object path =
 textEditView : CursorMode -> State -> Style -> Html Msg
 textEditView cursorMode state object =
   case (object.objectType, state.selected) of
-    (Text string, True) ->
+    (Text string style, True) ->
       div
         [ Html.Attributes.style
           [ ("position", "absolute")
@@ -436,8 +444,10 @@ textEditView cursorMode state object =
             , ("width", "100%")
             , ("height", "100%")
             , ("margin-top", "0px")
-            , ("font-size", "12px")
-            , ("font-family", "sans-serif")
+            , ("line-height", "1.0")
+            , ("font-size", toString style.size++ "px")
+            , ("font-family", style.font)
+            , ("color", "#" ++ colorToHex style.color)
             , ("border", "none")
             , ("background", "none")
             , ("opacity", if object.hidden then "0.2" else "1")
@@ -482,7 +492,7 @@ selectedView cursorMode id object =
     [
     ] <|
     [ case object.objectType of
-        Text _ ->
+        Text _ _ ->
           text ""
         _ ->
           if not object.hidden then

@@ -14,7 +14,7 @@ import Svg.Attributes as Attr exposing (..)
 import Color exposing (Color)
 
 import Anigram.Common exposing (..)
-import Anigram.Object as Objects
+import Anigram.Object as Objects exposing (defaultTextStyle)
 import Anigram.Change as Change
 import Anigram.Snapping as Snap
 import Anigram.Selection as Selection
@@ -167,6 +167,7 @@ reduceFrameChanges frame =
       ++ getLastChange Change.isSizeTo changes
       ++ getLastChange Change.isFill changes
       ++ getLastChange Change.isStroke changes
+      ++ getLastChange Change.isTextSizeTo changes
       ++ List.filter Change.isMove changes
       ++ List.filter Change.isResize changes
 
@@ -294,10 +295,17 @@ applyChange change style =
   case change of
     ChangeType objectType -> { style | objectType = objectType }
     Hide state -> { style | hidden = state }
-    SetText string -> { style | objectType = Text string }
     Move delta -> Objects.move delta style
     MoveTo position -> { style | x = position.x, y = position.y }
     Resize corner delta -> Objects.resize corner delta style
     SizeTo size -> { style | width = size.width, height = size.height }
     Fill color -> { style | fill = color }
     Stroke color -> { style | stroke = color }
+    TextSizeTo size ->
+      case style.objectType of
+        Text string textStyle -> { style | objectType = Text string { textStyle | size = size } }
+        _ -> { style | objectType = Text "Add text here" { defaultTextStyle | size = size } }
+    SetText string ->
+      case style.objectType of
+        Text _ textStyle -> { style | objectType = Text string textStyle }
+        _ -> { style | objectType = Text string defaultTextStyle }

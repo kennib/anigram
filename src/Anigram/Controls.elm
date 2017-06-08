@@ -1,5 +1,7 @@
 module Anigram.Controls exposing (..)
 
+import Json.Decode as Json
+
 import Html exposing (..)
 import Html.Events exposing (..)
 import Html.Attributes exposing (..)
@@ -10,7 +12,7 @@ import ColorMath exposing (colorToHex)
 import FontAwesome as Icon
 
 import Anigram.Common exposing (..)
-import Anigram.Object as Obj
+import Anigram.Object as Obj exposing (defaultTextStyle)
 import Anigram.Frames as Frames
 import Anigram.Store as Store
 
@@ -19,12 +21,13 @@ model =
   , addObjectControl "Add a Square" Icon.square <| Shape Square
   , addObjectControl "Add an Arrow" Icon.long_arrow_right <| Arrow
   , addObjectControl "Add an Arc Arrow" Icon.reply <| ArcArrow 100
-  , addObjectControl "Add Text" Icon.file_text <| Text "Add Text here"
+  , addObjectControl "Add Text" Icon.file_text <| Text "Add Text here" defaultTextStyle
   , buttonControl "Show" Icon.eye <| Selection <| Hide False 
   , buttonControl "Hide" Icon.eye_slash <| Selection <| Hide True
   , buttonControl "Duplicate" Icon.copy Duplicate
   , colorControl 0 "Fill" Color.green FillSelector
   , colorControl 1 "Stroke" Color.grey StrokeSelector
+  , numberControl "Text Size" Icon.text_height defaultTextStyle.size
   , buttonControl "Add Frame" Icon.plus_square AddFrame
   , buttonControl "Save" Icon.cloud_upload SaveAnigram
   , buttonControl "Load" Icon.cloud_download LoadAnigram
@@ -32,6 +35,9 @@ model =
 
 buttonControl tooltip icon message =
   newButton tooltip (icon Color.black 20) message
+
+numberControl tooltip icon number =
+  newNumberPicker tooltip (icon Color.black 20) number
 
 addObjectControl tooltip icon object =
   newObjectAdder tooltip (icon Color.black 20) object
@@ -44,6 +50,13 @@ newButton tooltip icon message =
   { tooltip = tooltip
   , icon = icon
   , message = message
+  }
+
+newNumberPicker tooltip icon number =
+  NumberPicker
+  { tooltip = tooltip
+  , icon = icon
+  , number = number
   }
 
 newObjectAdder tooltip icon object =
@@ -135,6 +148,37 @@ controlView control =
         , onClick control.message 
         ]
         [ control.icon
+        ]
+    NumberPicker control ->
+      span
+        [ title control.tooltip
+        , style
+          [ ("display", "inline-block")
+          , ("box-sizing", "border-box")
+          , ("height", "27px")
+          , ("margin", "2px")
+          , ("padding", "2px")
+          , ("vertical-align", "bottom")
+          , ("background-color", "#eee")
+          , ("border", "1px solid grey")
+          ]
+        ]
+        [ control.icon
+        , select
+          [ style
+            [ ("width", "50px")
+            , ("margin", "4px")
+            , ("margin-top", "0px")
+            , ("vertical-align", "bottom")
+            , ("font-size", "14px")
+            ]
+          , on "change"
+            <| Json.map
+              (Selection << TextSizeTo << Result.withDefault control.number << String.toInt)
+              (Json.at ["target", "value"] Json.string)
+          ]
+          <| List.map (\size -> option [ value <| toString size, default <| size == control.number ] [ text <| toString size ])
+            [8, 12, 16, 24, 36, 48, 72, 106]
         ]
     ObjectAdder control ->
       button

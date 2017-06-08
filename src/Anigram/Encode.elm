@@ -35,7 +35,7 @@ encodeChange change =
     ChangeType objectType ->
       Json.object
         [ ( "change", Json.string "changeType" )
-        , ( "type", Json.string <| toString objectType )
+        , ( "type", encodeObjectType objectType )
         ]
     Hide state ->
       Json.object
@@ -78,6 +78,40 @@ encodeChange change =
         [ ("change", Json.string "stroke" )
         , ("color", encodeColor color)
         ]
+    TextSizeTo size ->
+      Json.object
+        [ ("change", Json.string "textSize" )
+        , ("size", Json.int size)
+        ]
+
+encodeObjectType : ObjectType -> Json.Value
+encodeObjectType objectType =
+  Json.object <|
+    case objectType of
+      Shape shape ->
+        [ ( "type", Json.string "shape" )
+        , ( "shape", Json.string <| toString shape)
+        ]
+      Text text style ->
+        [ ( "type", Json.string "text" )
+        , ( "text", Json.string text )
+        , ( "style", encodeTextStyle style )
+        ]
+      Arrow ->
+        [ ( "type", Json.string "arrow" )
+        ]
+      ArcArrow radius ->
+        [ ( "type", Json.string "arcArrow" )
+        , ( "radius", Json.float radius )
+        ]
+
+encodeTextStyle : TextStyle -> Json.Value
+encodeTextStyle style =
+  Json.object
+    [ ( "size", Json.int style.size )
+    , ( "font", Json.string style.font )
+    , ( "color", encodeColor style.color )
+    ]
 
 encodeColor : Color -> Json.Value
 encodeColor color =

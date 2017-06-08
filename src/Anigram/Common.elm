@@ -42,13 +42,19 @@ type alias Style =
 
 type ObjectType
   = Shape ShapeType
-  | Text String
+  | Text String TextStyle
   | Arrow
   | ArcArrow Float
 
 type ShapeType
   = Circle
   | Square
+
+type alias TextStyle =
+  { size : Int
+  , font : String
+  , color : Color
+  }
 
 type alias Position =
   { x : Int
@@ -78,6 +84,11 @@ type Control msg
     { tooltip : String
     , icon : Html msg
     , message : msg
+    }
+  | NumberPicker
+    { tooltip : String
+    , icon : Html msg
+    , number : Int
     }
   | ObjectAdder
     { tooltip : String
@@ -162,6 +173,7 @@ type Change
   | SizeTo Size
   | Fill Color
   | Stroke Color
+  | TextSizeTo Int
 
 type ControlMsg
   = OpenClose Int Bool
