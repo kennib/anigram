@@ -75,7 +75,7 @@ encodeChange change =
         ]
     Stroke color ->
       Json.object
-        [ ("change", Json.string "Stroke" )
+        [ ("change", Json.string "stroke" )
         , ("color", encodeColor color)
         ]
 
