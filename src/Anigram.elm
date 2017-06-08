@@ -96,7 +96,9 @@ keyboardCombo model (ctrl, shift, key) =
         (True, False, Keyboard.Key.Z) -> Undo
         (True, True, Keyboard.Key.Z) -> Redo
         (True, False, Keyboard.Key.Y) -> Redo
-        (_, _, Keyboard.Key.Escape) -> SetCursor SelectMode
+        (True, False, Keyboard.Key.A) -> SelectAll
+        (True, False, Keyboard.Key.D) -> DeselectAll
+        (_, _, Keyboard.Key.Escape) -> DeselectAll
         (_, _, Keyboard.Key.Delete) -> Selection <| Hide True
         (_, _, Keyboard.Key.Backspace) -> Selection <| Hide True
         (_, _, Keyboard.Key.Unknown 61 {- Plus -}) -> Selection <| Hide False

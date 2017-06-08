@@ -65,10 +65,11 @@ update msg model =
       | objects = List.updateIf (\object -> object.id == id) (select True >> setDragDrop PickedUp) model.objects
       , focus = ObjectArea
       }
-    unselectAll model =
+    selectAll state model =
       { model
-      | objects = List.map (select False) model.objects
+      | objects = List.map (select state) model.objects
       , focus = ObjectArea
+      , cursorMode = SelectMode
       }
     setCursorMode mode model = { model | cursorMode = mode }
   in
@@ -79,8 +80,10 @@ update msg model =
         (setSelection id model, Cmd.none)
       SelectAddObject id ->
         (addSelection id model, Cmd.none)
+      SelectAll ->
+        (selectAll True model, Cmd.none)
       DeselectAll ->
-        (unselectAll model, Cmd.none)
+        (selectAll False model, Cmd.none)
       DragDrop dragDrop ->
         (mapSelection (setDragDrop dragDrop) |> setCursorMode (if DragDrop.isDragged dragDrop then DragMode else SelectMode)
         , if DragDrop.isDropped dragDrop then Cmd.message <| Selection <| Move <| DragDrop.delta dragDrop else Cmd.none)

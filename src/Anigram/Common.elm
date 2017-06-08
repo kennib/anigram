@@ -131,6 +131,7 @@ type Msg
   | SelectAddObject ObjectId
   | SetCursor CursorMode
   | DeselectAll
+  | SelectAll
   | Duplicate
   | Undo
   | Redo
