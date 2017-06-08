@@ -26,7 +26,7 @@ drop dragDrop =
   case dragDrop of
     Unselected -> Unselected
     PickedUp -> Unselected
-    StartDrag start -> Drop start start
+    StartDrag start -> Unselected
     Drag start end -> Drop start end
     Drop start end -> Drop start end
 

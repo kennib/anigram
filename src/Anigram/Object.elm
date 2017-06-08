@@ -422,7 +422,7 @@ textEditView cursorMode state object =
         [ Html.Attributes.style
           [ ("position", "absolute")
           , ("left", toString object.x ++ "px")
-          , ("top", toString (object.y + 40) ++ "px")
+          , ("top", toString object.y ++ "px")
           , ("width", toString (abs object.width) ++ "px")
           , ("height", toString (abs object.height) ++ "px")
           ]
