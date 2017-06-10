@@ -155,6 +155,7 @@ type Msg
   | SelectFrame Int
   | PreviousFrame
   | NextFrame
+  | DeleteFrame
   | SaveAnigram
   | AnigramSaved
   | LoadAnigram

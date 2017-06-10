@@ -119,6 +119,8 @@ keyboardCombo model (ctrl, shift, key) =
         (True, False, Keyboard.Key.Y) -> Redo
         (_, _, Keyboard.Key.Up)    -> PreviousFrame
         (_, _, Keyboard.Key.Down)  -> NextFrame
+        (_, _, Keyboard.Key.Delete) -> DeleteFrame
+        (_, _, Keyboard.Key.Backspace) -> DeleteFrame
         _ -> NoOp
 
 view : Model -> Html Msg

@@ -70,6 +70,9 @@ update msg model =
     NextFrame ->
       ( { model | frameIndex = Basics.min (List.length model.frames - 1) <| model.frameIndex+1 }
       , Cmd.none )
+    DeleteFrame ->
+      ( { model | frames = removeFrame model.frameIndex model.frames }
+      , Cmd.none)
     AddObject objectType ->
       ( { model | cursorMode = PlaceObjectMode objectType }
       , Cmd.none)
@@ -116,6 +119,35 @@ mergeFrames baseFrames mergingFrames =
     baseFrames
     mergingFrames
 
+removeFrame : Int -> List Frame -> List Frame
+removeFrame frameIndex frames =
+  let
+    (start, end) = List.splitAt frameIndex frames
+    newEnd =
+      case end of
+        [] -> []
+        [removee] -> []
+        removee::nextFrame::end -> combineFrames removee nextFrame :: end
+  in
+    start ++ newEnd
+
+combineFrames : Frame -> Frame -> Frame
+combineFrames frame nextFrame =
+  let
+    mergeFrame = Dict.insert
+    mergeFrames objectId changes nextChanges =
+      Dict.insert objectId
+        <| reduceObjectChanges
+        <| changes ++ nextChanges
+  in
+    Dict.merge
+      mergeFrame
+      mergeFrames
+      mergeFrame
+      frame
+      nextFrame
+      Dict.empty
+
 updateChange : Change -> Model -> (Model, Cmd Msg)
 updateChange change model =
   (addChangeToModel change model, Cmd.none)
@@ -157,27 +189,28 @@ reduceChanges objects frames =
 
 reduceFrameChanges : Frame -> Frame
 reduceFrameChanges frame =
-  let
-    reduceObjectChanges objectId changes =
-      []
-      ++ getLastChange Change.isChangeType changes
-      ++ getLastChange Change.isHide changes
-      ++ getLastChange Change.isSetText changes
-      ++ getLastChange Change.isMoveTo changes
-      ++ getLastChange Change.isSizeTo changes
-      ++ getLastChange Change.isFill changes
-      ++ getLastChange Change.isStroke changes
-      ++ getLastChange Change.isTextSizeTo changes
-      ++ List.filter Change.isMove changes
-      ++ List.filter Change.isResize changes
+  frame
+  |> Dict.map (\objectId -> reduceObjectChanges)
 
+reduceObjectChanges : List Change -> List Change
+reduceObjectChanges changes =
+  let
     getLastChange predicate changes =
       List.reverse changes
       |> List.filter predicate
       |> List.take 1
   in
-    frame
-    |> Dict.map reduceObjectChanges
+    []
+    ++ getLastChange Change.isChangeType changes
+    ++ getLastChange Change.isHide changes
+    ++ getLastChange Change.isSetText changes
+    ++ getLastChange Change.isMoveTo changes
+    ++ getLastChange Change.isSizeTo changes
+    ++ getLastChange Change.isFill changes
+    ++ getLastChange Change.isStroke changes
+    ++ getLastChange Change.isTextSizeTo changes
+    ++ List.filter Change.isMove changes
+    ++ List.filter Change.isResize changes
 
 removeNonChanges : List ObjectStyle -> Frame -> Frame
 removeNonChanges prevObjects frame =

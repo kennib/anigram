@@ -13,6 +13,8 @@ update msg model =
       (push model, Cmd.none)
     Selection change ->
       (push model, Cmd.none)
+    DeleteFrame ->
+      (push model, Cmd.none)
     _ ->
       (model, Cmd.none)
 
