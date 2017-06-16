@@ -297,8 +297,8 @@ unselectedView cursorMode objectId object =
     case object.objectType of
       Shape Circle ->
         ellipse
-          [ cx <| toString (object.x + object.width//2)
-          , cy <| toString (object.y + object.height//2)
+          [ cx <| toString (object.x + (abs <| object.width//2))
+          , cy <| toString (object.y + (abs <| object.height//2))
           , rx <| toString <| abs <| object.width//2
           , ry <| toString <| abs <| object.height//2
           , flip object
