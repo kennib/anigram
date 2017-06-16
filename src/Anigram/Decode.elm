@@ -62,7 +62,7 @@ decodeChange =
       "textColor" ->
         Json.map (Just << TextColor)
           (Json.field "color" decodeColor)
-      "textSizeTo" ->
+      "textSize" ->
         Json.map (Just << TextSizeTo)
           (Json.field "size" Json.int)
       _ ->

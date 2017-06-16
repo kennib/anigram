@@ -1,6 +1,9 @@
 module Anigram.Controls exposing (..)
 
+import Maybe.Extra as Maybe
+
 import Json.Decode as Json
+import Json.Encode exposing (encode)
 
 import Html exposing (..)
 import Html.Events exposing (..)
@@ -15,6 +18,8 @@ import Anigram.Common exposing (..)
 import Anigram.Object as Obj exposing (defaultTextStyle)
 import Anigram.Frames as Frames
 import Anigram.Store as Store
+import Anigram.Decode as Decode exposing (decodeChange)
+import Anigram.Encode as Encode exposing (encodeChange)
 
 model =
   [ addObjectControl "Add a Circle" Icon.circle <| Shape Circle
@@ -28,7 +33,7 @@ model =
   , colorControl 0 "Fill color" Color.green FillSelector
   , colorControl 1 "Stroke color" Color.grey StrokeSelector
   , colorControl 2 "Text color" Color.red TextSelector
-  , numberControl "Text Size" Icon.text_height defaultTextStyle.size
+  , listControl "Text size" Icon.text_height defaultTextSize textSizes
   , buttonControl "Add Frame" Icon.plus_square AddFrame
   , buttonControl "Save" Icon.cloud_upload SaveAnigram
   , buttonControl "Load" Icon.cloud_download LoadAnigram
@@ -37,8 +42,8 @@ model =
 buttonControl tooltip icon message =
   newButton tooltip (icon Color.black 20) message
 
-numberControl tooltip icon number =
-  newNumberPicker tooltip (icon Color.black 20) number
+listControl tooltip icon default choices =
+  newListPicker tooltip (icon Color.black 20) default choices
 
 addObjectControl tooltip icon object =
   newObjectAdder tooltip (icon Color.black 20) object
@@ -53,11 +58,12 @@ newButton tooltip icon message =
   , message = message
   }
 
-newNumberPicker tooltip icon number =
-  NumberPicker
+newListPicker tooltip icon default choices =
+  ListPicker
   { tooltip = tooltip
   , icon = icon
-  , number = number
+  , choices = choices
+  , choice = default
   }
 
 newObjectAdder tooltip icon object =
@@ -76,10 +82,29 @@ newColorSelector id tooltip color kind =
   , open = False
   }
 
+defaultTextSize =
+  TextSizeTo defaultTextStyle.size
+
+textSizes =
+  List.map
+    (\size -> (toString size, TextSizeTo size))
+    [8, 12, 16, 24, 36, 48, 72, 106]
+
 update msg model =
   let
     setAnigram anigram model =
       { model | objects = Frames.objectIds anigram.frames |> List.map Obj.newState, frames = anigram.frames }
+
+    setChoiceOf choice =
+      { model | controls = List.map (setChoice choice) model.controls }
+    setChoice choice control =
+      case control of
+        ListPicker picker ->
+          if List.member choice <| List.map Tuple.second picker.choices then
+            ListPicker { picker | choice = choice }
+          else
+            control
+        _ -> control
 
     setColorOf kind color =
       { model | controls = List.map (setColor kind color) model.controls }
@@ -150,7 +175,7 @@ controlView control =
         ]
         [ control.icon
         ]
-    NumberPicker control ->
+    ListPicker control ->
       span
         [ title control.tooltip
         , style
@@ -167,7 +192,7 @@ controlView control =
         [ control.icon
         , select
           [ style
-            [ ("width", "50px")
+            [ ("width", "auto")
             , ("margin", "4px")
             , ("margin-top", "0px")
             , ("vertical-align", "bottom")
@@ -175,11 +200,11 @@ controlView control =
             ]
           , on "change"
             <| Json.map
-              (Selection << TextSizeTo << Result.withDefault control.number << String.toInt)
+              (Maybe.withDefault NoOp << Maybe.map Selection << Maybe.join << Result.toMaybe << Json.decodeString decodeChange)
               (Json.at ["target", "value"] Json.string)
           ]
-          <| List.map (\size -> option [ value <| toString size, default <| size == control.number ] [ text <| toString size ])
-            [8, 12, 16, 24, 36, 48, 72, 106]
+          <| List.map (\(label, choice) -> option [ value <| encode 0 <| encodeChange choice, default <| choice == control.choice ] [ text label ])
+          <| control.choices
         ]
     ObjectAdder control ->
       button

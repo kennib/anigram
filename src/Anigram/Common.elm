@@ -83,10 +83,11 @@ type Control msg
     , icon : Html msg
     , message : msg
     }
-  | NumberPicker
+  | ListPicker
     { tooltip : String
     , icon : Html msg
-    , number : Int
+    , choices : List (String, Change)
+    , choice : Change
     }
   | ObjectAdder
     { tooltip : String
