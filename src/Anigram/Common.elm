@@ -166,7 +166,8 @@ type Msg
   | NoOp
 
 type Change
-  = ChangeType ObjectType
+  = AddStyleSet StyleSet
+  | ChangeType ObjectType
   | Hide Bool
   | SetText String
   | Move Position
@@ -177,6 +178,8 @@ type Change
   | Stroke Color
   | TextColor Color
   | TextSizeTo Int
+
+type alias StyleSet = List Change
 
 type ControlMsg
   = OpenClose Int Bool

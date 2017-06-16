@@ -32,6 +32,11 @@ encodeChanges changes =
 encodeChange : Change -> Json.Value
 encodeChange change =
   case change of
+    AddStyleSet styleSet ->
+      Json.object
+        [ ( "change", Json.string "addStyleSet" )
+        , ( "styleSet", encodeChanges styleSet )
+        ]
     ChangeType objectType ->
       Json.object
         [ ( "change", Json.string "changeType" )

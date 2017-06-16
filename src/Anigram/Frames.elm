@@ -217,6 +217,7 @@ reduceObjectChanges changes =
       |> List.take 1
   in
     []
+    ++ getLastChange Change.isAddStyleSet changes
     ++ getLastChange Change.isChangeType changes
     ++ getLastChange Change.isHide changes
     ++ getLastChange Change.isSetText changes
@@ -328,6 +329,7 @@ applyChanges changes style =
 applyChange : Change -> Style -> Style
 applyChange change style =
   case change of
+    AddStyleSet styleSet -> List.foldl applyChange style styleSet
     ChangeType objectType -> { style | objectType = objectType }
     Hide state -> { style | hidden = state }
     Move delta -> Objects.move delta style

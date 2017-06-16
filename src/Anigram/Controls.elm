@@ -1,5 +1,6 @@
 module Anigram.Controls exposing (..)
 
+import Dict
 import Maybe.Extra as Maybe
 
 import Json.Decode as Json
@@ -18,6 +19,7 @@ import Anigram.Common exposing (..)
 import Anigram.Object as Obj exposing (defaultTextStyle)
 import Anigram.Frames as Frames
 import Anigram.Store as Store
+import Anigram.StyleSets as StyleSets
 import Anigram.Decode as Decode exposing (decodeChange)
 import Anigram.Encode as Encode exposing (encodeChange)
 
@@ -27,6 +29,7 @@ model =
   , addObjectControl "Add an Arrow" Icon.long_arrow_right <| Arrow
   , addObjectControl "Add an Arc Arrow" Icon.reply <| ArcArrow 100
   , addObjectControl "Add Text" Icon.file_text <| Text "Add Text here" defaultTextStyle
+  , listControl "Style Sets" Icon.paint_brush defaultStyleSet styleSets
   , buttonControl "Show" Icon.eye <| Selection <| Hide False 
   , buttonControl "Hide" Icon.eye_slash <| Selection <| Hide True
   , buttonControl "Duplicate" Icon.copy Duplicate
@@ -89,6 +92,14 @@ textSizes =
   List.map
     (\size -> (toString size, TextSizeTo size))
     [8, 12, 16, 24, 36, 48, 72, 106]
+
+defaultStyleSet =
+  AddStyleSet StyleSets.default
+
+styleSets =
+  StyleSets.sets
+    |> Dict.toList
+    |> List.map (Tuple.mapSecond AddStyleSet)
 
 update msg model =
   let

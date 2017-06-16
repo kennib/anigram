@@ -8,6 +8,12 @@ isChangeType change =
     ChangeType _ -> True
     _ -> False
 
+isAddStyleSet : Change -> Bool
+isAddStyleSet change =
+  case change of
+    AddStyleSet _ -> True
+    _ -> False
+
 isHide : Change -> Bool
 isHide change =
   case change of

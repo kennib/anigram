@@ -23,7 +23,7 @@ decodeFrame =
 
 decodeChanges : Json.Decoder (List Change)
 decodeChanges =
-  Json.list decodeChange
+  Json.list (Json.lazy <| \_ -> decodeChange)
     |> Json.map Maybe.values
 
 decodeChange : Json.Decoder (Maybe Change)
@@ -31,6 +31,9 @@ decodeChange =
   Json.field "change" Json.string
   |> Json.andThen (\change ->
     case change of
+      "addStyleSet" ->
+        Json.map (Just << AddStyleSet)
+          (Json.field "styleSet" decodeChanges)
       "changeType" ->
         Json.map (Just << ChangeType)
           (Json.field "type" decodeObjectType)
