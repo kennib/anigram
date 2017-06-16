@@ -9,7 +9,7 @@ import Json.Decode as Json
 import Html exposing (Html, div, textarea)
 import Html.Attributes exposing (attribute, autofocus)
 import Html.Events exposing (onInput, onWithOptions, defaultOptions)
-import Html.Events.Extra exposing (onShiftMouseDown, onPositionMouseDown, onPositionMouseUp, onPositionMouseMove)
+import Html.Events.Extra exposing (onShiftPositionMouseDown, onShiftMouseDown, onPositionMouseDown, onPositionMouseUp, onPositionMouseMove)
 import Svg exposing (..)
 import Svg.Events exposing (..)
 import Svg.Attributes as Attr exposing (..)
@@ -49,29 +49,28 @@ newState id =
   { id = id
   , state =
     { selected = True
-    , dragDrop = Unselected
-    , dragResize = ((Left, Top), Unselected)
     }
+  }
+
+newStyle : ObjectState -> ObjectStyle
+newStyle object =
+  { id = object.id
+  , style = defaultStyle
   }
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   let
-    mapSelection function =
-      { model
-      | objects = List.updateIf (.state >> .selected) function model.objects
-      , focus = ObjectArea
-      }
     setSelection id model =
       { model
       | objects =
-            List.map (select False >> setDragDrop Unselected) model.objects
-         |> List.updateIf (\object -> object.id == id) (select True >> setDragDrop PickedUp)
+            List.map (select False) model.objects
+         |> List.updateIf (\object -> object.id == id) (select True)
       , focus = ObjectArea
       }
     addSelection id model =
       { model
-      | objects = List.updateIf (\object -> object.id == id) (select True >> setDragDrop PickedUp) model.objects
+      | objects = List.updateIf (\object -> object.id == id) (select True) model.objects
       , focus = ObjectArea
       }
     selectAll state model =
@@ -80,25 +79,20 @@ update msg model =
       , focus = ObjectArea
       , cursorMode = SelectMode
       }
-    setCursorMode mode model = { model | cursorMode = mode }
   in
     case msg of
       AddObject _ ->
-        (mapSelection noInteraction, Cmd.none)
+        (selectAll False model, Cmd.none)
       SelectObject id ->
         (setSelection id model, Cmd.none)
       SelectAddObject id ->
         (addSelection id model, Cmd.none)
+      SelectDragDrop id dragDrop ->
+        (setSelection id { model | cursorMode = DragMode dragDrop}, Cmd.none)
       SelectAll ->
         (selectAll True model, Cmd.none)
       DeselectAll ->
         (selectAll False model, Cmd.none)
-      DragDrop dragDrop ->
-        (mapSelection (setDragDrop dragDrop) |> setCursorMode (if DragDrop.isDragged dragDrop then DragMode else SelectMode)
-        , if DragDrop.isDropped dragDrop then Cmd.message <| Selection <| Move <| DragDrop.delta dragDrop else Cmd.none)
-      DragResize corner dragDrop ->
-        (mapSelection (setDragResize corner dragDrop) |> setCursorMode (if DragDrop.isDragged dragDrop then DragResizeMode corner else SelectMode)
-        , if DragDrop.isDropped dragDrop then Cmd.message <| Selection <| Resize corner <| DragDrop.delta dragDrop else Cmd.none)
       _ ->
         (model, Cmd.none)
 
@@ -107,8 +101,8 @@ view model objects =
   div
     [ Attr.style <| "height: 100vh; flex-grow: 1; cursor: "
       ++ (case model.cursorMode of
-        DragMode -> "move"
-        DragResizeMode corner ->
+        DragMode _ -> "move"
+        DragResizeMode corner _ ->
           case corner of
             (Left , Top   ) -> "nw-resize"
             (Left , Bottom) -> "sw-resize"
@@ -222,46 +216,25 @@ setDragDrop dragDropState =
 setDragResize corner dragDropState =
   setState <| \state -> { state | dragResize = (corner, dragDropState) }
 
-drag object pos =
-  { object | dragDrop = DragDrop.drag object.dragDrop pos }
+drop : DragDrop.DragDrop -> Style -> Style
+drop dragDrop =
+  move <| DragDrop.delta dragDrop
 
-drop : State -> Style -> Style
-drop state =
-  move <| DragDrop.delta state.dragDrop
+resizeDrop : Corner -> DragDrop.DragDrop -> Style -> Style
+resizeDrop corner dragResize =
+  resize corner <| DragDrop.delta dragResize
 
-resizeDrop : State -> Style -> Style
-resizeDrop state =
-  let
-    (corner, dragResize) = state.dragResize
-    delta = DragDrop.delta dragResize
-  in
-    resize corner delta
+applyCursorMode : CursorMode -> Style -> Style
+applyCursorMode mode =
+  case mode of
+    DragMode dragDrop -> drop dragDrop
+    DragResizeMode corner dragResize -> resizeDrop corner dragResize
+    _ -> identity
 
-applyState : State -> Style -> Style
-applyState state style =
-  let
-    doDrop style =
-      if DragDrop.isDragged state.dragDrop then
-        drop state style
-      else
-        style
-    doResizeDrop style =
-      if DragDrop.isDragged <| Tuple.second state.dragResize then
-        resizeDrop state style
-      else
-        style
-  in
-    style
-      |> doDrop
-      |> doResizeDrop
-
-currentObjectStyles : List ObjectState -> List ObjectStyle
-currentObjectStyles objects =
+applyCursor : CursorMode -> List Object -> List Object
+applyCursor cursorMode objects =
   objects
-    |> List.map (\object ->
-      { id = object.id
-      , style = applyState object.state defaultStyle
-      })
+    |> List.updateIf (.state >> .selected) (setStyle <| applyCursorMode cursorMode)
 
 corners object =
   case object.objectType of
@@ -290,19 +263,16 @@ selectedIds : List ObjectState -> List ObjectId
 selectedIds =
   List.filter (.state >> .selected) >> List.map .id
 
-noInteraction =
-  setState <| \state -> { state | selected = False, dragDrop = Unselected, dragResize = ((Left, Top), Unselected) }
-
-selectClick id shiftClick =
+selectClick id shiftClick pos =
   if shiftClick then
     SelectAddObject id
   else
-    SelectObject id
+    SelectDragDrop id <| StartDrag pos
 
 onCursor cursorMode objectId =
   case cursorMode of
     SelectMode ->
-      onShiftMouseDown <| selectClick objectId
+      onShiftPositionMouseDown <| selectClick objectId
     PlaceObjectMode objectType ->
       onPositionMouseDown <| PlaceObject objectType
     _ ->
@@ -434,7 +404,7 @@ textEditView cursorMode state object =
           , ("width", toString (abs object.width) ++ "px")
           , ("height", toString (abs object.height) ++ "px")
           ]
-        , onMouseDown <| if cursorMode == SelectMode then (DragDrop <| PickedUp) else NoOp
+        , onPositionMouseDown <| if cursorMode == SelectMode then SetCursor << DragMode << StartDrag else \_ -> NoOp
         , Attr.cursor "move"
         ]
         [ textarea
@@ -471,7 +441,7 @@ selectedView cursorMode id object =
       circle
         [ cx <| toString pos.x, cy <| toString pos.y, r "6"
         , fill "white", stroke "black"
-        , onMouseDown <| if cursorMode == SelectMode then (DragResize corner <| PickedUp) else NoOp
+        , onPositionMouseDown <| if cursorMode == SelectMode then SetCursor << DragResizeMode corner << StartDrag else \_ -> NoOp
         ] []
     cornersSvg =
       List.map (\(corner, pos) -> cornerSvg corner pos) (corners object)
@@ -484,7 +454,7 @@ selectedView cursorMode id object =
         , flip object
         , fill "#00000000"
         , opacity "0"
-        , onMouseDown <| if cursorMode == SelectMode then (DragDrop <| PickedUp) else NoOp
+        , onPositionMouseDown <| if cursorMode == SelectMode then SetCursor << DragMode << StartDrag else \_ -> NoOp
         ]
         []
   in

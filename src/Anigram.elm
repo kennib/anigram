@@ -59,12 +59,6 @@ update msg model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
   let
-    dragDrops =
-      List.map (.state >> .dragDrop) model.objects
-        |> List.find DragDrop.isDragged
-    dragResizes =
-      List.map (.state >> .dragResize) model.objects
-        |> List.find (Tuple.second >> DragDrop.isDragged)
     snap =
       Snap.snapDragDrop
         (Frames.getFrameObjectsWithoutState model.frameIndex model.frames model.objects |> Maybe.withDefault [])
@@ -74,23 +68,25 @@ subscriptions model =
         (Frames.getFrameObjectsWithoutState model.frameIndex model.frames model.objects |> Maybe.withDefault [])
         (Objects.selectedIds model.objects)
   in
-    case (model.cursorMode, dragResizes, dragDrops) of
-      (DragSelectMode dragDrop, _, _) ->
+    case model.cursorMode of
+      SelectMode ->
+        Sub.none
+      DragSelectMode dragDrop ->
         Sub.batch
           [ Mouse.moves <| \pos -> SetCursor <| DragSelectMode <| DragDrop.drag dragDrop pos
-          , Mouse.ups   <| \pos -> Maybe.withDefault NoOp <| Maybe.map (uncurry DragSelect) <| DragDrop.startend <| DragDrop.drop <| DragDrop.drag dragDrop pos
+          , Mouse.ups   <| \pos -> Maybe.withDefault NoOp <| Maybe.map (uncurry DragSelect) <| DragDrop.startend <| DragDrop.drag dragDrop pos
           ]
-      (_, Just (corner, dragDrop), _) ->
+      DragMode dragDrop ->
         Sub.batch
-          [ Mouse.moves <| \pos -> DragResize corner <| DragDrop.drag dragDrop pos
-          , Mouse.ups <| \pos -> uncurry DragResize <| curry snapResize corner <| DragDrop.drop <| DragDrop.drag dragDrop pos
+          [ Mouse.moves <| \pos -> SetCursor <| DragMode <| DragDrop.drag dragDrop pos
+          , Mouse.ups <| \pos -> DragDrop <| dragDrop
           ]
-      (_, _, Just dragDrop) ->
+      DragResizeMode corner dragResize ->
         Sub.batch
-          [ Mouse.moves <| \pos -> DragDrop <| DragDrop.drag dragDrop pos
-          , Mouse.ups <| \pos -> DragDrop <| DragDrop.mapDropped snap <| DragDrop.drop <| DragDrop.drag dragDrop pos
+          [ Mouse.moves <| \pos -> SetCursor <| DragResizeMode corner <| DragDrop.drag dragResize pos
+          , Mouse.ups <| \pos -> DragResize corner dragResize
           ]
-      _ ->
+      PlaceObjectMode _ ->
         Sub.none
 
 keyboardCombo : Model -> (Bool, Bool, Key) -> Msg
@@ -146,6 +142,6 @@ anigramView model =
     ]
     [ Objects.view model
       <| Maybe.withDefault []
-      <| Frames.getFrameObjects model.frameIndex model.frames model.objects
+      <| Frames.getFrameObjects model.frameIndex model.frames model.cursorMode model.objects
     , Frames.view model
     ]

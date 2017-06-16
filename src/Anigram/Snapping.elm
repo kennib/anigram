@@ -8,25 +8,37 @@ import DragDrop exposing (DragDrop)
 import Anigram.Common exposing (..)
 import Anigram.Object as Object
 
-snapResize  : List Object -> List ObjectId -> (Corner, DragDrop) -> (Corner, DragDrop)
+snapCursor : List Object -> List ObjectId -> CursorMode -> CursorMode
+snapCursor objects snappingObjects mode =
+  case mode of
+    DragMode dragDrop ->
+      DragMode
+        <| snapDragDrop objects snappingObjects dragDrop
+    DragResizeMode corner dragResize ->
+      uncurry DragResizeMode
+        <| snapResize objects snappingObjects (corner, dragResize)
+    otherMode ->
+      otherMode
+
+snapResize : List Object -> List ObjectId -> (Corner, DragDrop) -> (Corner, DragDrop)
 snapResize objects snappingObjects (corner, dragDrop) =
   let
     otherObjects = List.filterNot (\obj -> List.member obj.id snappingObjects) objects
     selected = List.filter (\obj -> List.member obj.id snappingObjects) objects
-      |> List.map (\object -> Object.setStyle (Object.applyState object.state) object)
+      |> List.map (\object -> Object.setStyle (Object.applyCursorMode <| DragResizeMode corner dragDrop) object)
     snapped = snap (snapLines <| List.map .style otherObjects) (List.andThen (cornerSnapLines corner) <| List.map .style selected)
   in
     (corner, DragDrop.mapEnd snapped dragDrop)
 
 snapDragDrop : List Object -> List ObjectId -> DragDrop -> DragDrop
-snapDragDrop objects snappingObjects =
+snapDragDrop objects snappingObjects dragDrop =
   let
     otherObjects = List.filterNot (\obj -> List.member obj.id snappingObjects) objects
     selected = List.filter (\obj -> List.member obj.id snappingObjects) objects
-      |> List.map (\object -> Object.setStyle (Object.applyState object.state) object)
+      |> List.map (\object -> Object.setStyle  (Object.applyCursorMode <| DragMode dragDrop) object)
     snapped = snap (snapLines <| List.map .style otherObjects) (snapLines <| List.map .style selected)
   in
-    DragDrop.mapEnd snapped
+    DragDrop.mapEnd snapped dragDrop
 
 snap : List SnapLine -> List SnapLine -> Position -> Position
 snap snapLines snappedLines pos =

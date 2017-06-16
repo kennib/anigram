@@ -29,12 +29,14 @@ objectIds frames =
     |> List.concat
     |> List.unique
 
+setCursorMode mode model = { model | cursorMode = mode }
+
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     DragSelect start end ->
         let
-          objects = getFrameObjects model.frameIndex model.frames model.objects |> Maybe.withDefault []
+          objects = getFrameObjects model.frameIndex model.frames model.cursorMode model.objects |> Maybe.withDefault []
           inBounds start end object =
             (  start.x < end.x && object.x > start.x && object.x+object.width < end.x
             || start.x > end.x && object.x < start.x && object.x+object.width > end.x
@@ -46,6 +48,20 @@ update msg model =
             Objects.select (inBounds start end object.style) objectState
         in
           ({ model | objects = List.map2 (selectInBounds start end) model.objects objects, cursorMode = SelectMode }, Cmd.none)
+    DragDrop dragDrop ->
+      let
+        objects = getFrameObjectsWithoutState model.frameIndex model.frames model.objects |> Maybe.withDefault []
+        snap = Snap.snapDragDrop objects (Objects.selectedIds model.objects)
+      in
+        update (Selection <| Move <| DragDrop.delta <| snap dragDrop) model
+          |> Tuple.mapFirst (setCursorMode SelectMode)
+    DragResize corner dragResize ->
+      let
+        objects = getFrameObjectsWithoutState model.frameIndex model.frames model.objects |> Maybe.withDefault []
+        snap = Snap.snapResize objects (Objects.selectedIds model.objects)
+      in
+        update (Selection <| uncurry Resize <| Tuple.mapSecond DragDrop.delta <| snap (corner, dragResize)) model
+          |> Tuple.mapFirst (setCursorMode SelectMode)
     Selection action ->
       updateChange action model
     Duplicate ->
@@ -80,8 +96,8 @@ update msg model =
       ( { model
         | objects = model.objects ++
             [ (Objects.newState <| List.length model.objects)
-                |> Objects.setState (\state -> { state | dragResize = ((Right, Bottom), DragDrop.StartDrag position) })
             ]
+        , cursorMode = DragResizeMode (Right, Bottom) <| DragDrop.StartDrag position
         }
           |> addChangeToModelAt 0 (ChangeType objectType)
           |> addChangeToModelAt 0 (MoveTo position)
@@ -157,7 +173,7 @@ addChangeToModelAt index change model =
   { model | frames =
     List.updateAt index (addChanges (Objects.selectedIds model.objects) change) model.frames
       |> Maybe.withDefault model.frames
-      |> reduceChanges (Objects.currentObjectStyles model.objects)
+      |> reduceChanges (List.map Objects.newStyle model.objects)
   }
 
 addChangeToModel : Change -> Model -> Model
@@ -260,29 +276,14 @@ viewFrame model index objects =
     <| List.map (\object -> Objects.unselectedView SelectMode object.id object.style)
     <| objects
 
-getFrameObjects : Int -> List Frame -> List ObjectState -> Maybe (List Object)
-getFrameObjects index frames objectStates =
+getFrameObjects : Int -> List Frame -> CursorMode -> List ObjectState -> Maybe (List Object)
+getFrameObjects index frames cursorMode objectStates =
   let
-    frameObjects = getFrameObjectsWithoutState index frames objectStates
-    snap =
-      Snap.snapDragDrop
-        (frameObjects |> Maybe.withDefault [])
-        (Objects.selectedIds objectStates)
-    snapResize =
-      Snap.snapResize
-        (frameObjects |> Maybe.withDefault [])
-        (Objects.selectedIds objectStates)
-    snapState state =
-      { state | dragDrop = snap state.dragDrop, dragResize = snapResize state.dragResize }
-    applyState : State -> Style -> Style
-    applyState state style =
-      Objects.applyState (snapState state) style
-    applyObjectState : Object -> Object
-    applyObjectState object =
-      Objects.setStyle (applyState object.state) object
+    snap objects = Snap.snapCursor objects (Objects.selectedIds objectStates) cursorMode
+    applyCursor objects = Objects.applyCursor (snap objects) objects
   in
-    frameObjects
-      |> Maybe.map (List.map applyObjectState)
+    getFrameObjectsWithoutState index frames objectStates
+      |> Maybe.map applyCursor
 
 getFrameObjectsWithoutState : Int -> List Frame -> List ObjectState -> Maybe (List Object)
 getFrameObjectsWithoutState index frames objectStates =

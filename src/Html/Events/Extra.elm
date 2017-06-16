@@ -1,5 +1,6 @@
 module Html.Events.Extra exposing
-  ( onShiftMouseDown
+  ( onShiftPositionMouseDown
+  , onShiftMouseDown
   , onPositionMouseDown
   , onPositionMouseUp
   , onPositionMouseMove
@@ -15,6 +16,13 @@ import Json.Decode as Json
 
 import Html exposing (Attribute)
 import Html.Events exposing (on, onWithOptions, defaultOptions)
+
+onShiftPositionMouseDown : (Bool -> Position -> msg) -> Attribute msg
+onShiftPositionMouseDown msg =
+  on "mousedown"
+    <| Json.map2 msg
+      shiftDecode
+      positionDecode
 
 onShiftMouseDown : (Bool -> msg) -> Attribute msg
 onShiftMouseDown msg =

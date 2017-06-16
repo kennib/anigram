@@ -25,8 +25,6 @@ type alias ObjectStyle =
 
 type alias State =
   { selected : Bool
-  , dragDrop : DragDrop.DragDrop
-  , dragResize : (Corner, DragDrop.DragDrop)
   }
 
 type alias Style =
@@ -128,8 +126,8 @@ type Focus
 type  CursorMode
   = SelectMode
   | DragSelectMode DragDrop.DragDrop
-  | DragMode
-  | DragResizeMode Corner
+  | DragMode DragDrop.DragDrop
+  | DragResizeMode Corner DragDrop.DragDrop
   | PlaceObjectMode ObjectType
 
 type alias History a =
@@ -142,15 +140,16 @@ type Msg
   | PlaceObject ObjectType Position
   | SelectObject ObjectId
   | SelectAddObject ObjectId
-  | SetCursor CursorMode
-  | DragSelect Position Position
   | DeselectAll
   | SelectAll
+  | SetCursor CursorMode
+  | DragSelect Position Position
+  | SelectDragDrop ObjectId DragDrop.DragDrop
+  | DragDrop DragDrop.DragDrop
+  | DragResize Corner DragDrop.DragDrop
   | Duplicate
   | Undo
   | Redo
-  | DragDrop DragDrop.DragDrop
-  | DragResize Corner DragDrop.DragDrop
   | AddFrame
   | SelectFrame Int
   | PreviousFrame
