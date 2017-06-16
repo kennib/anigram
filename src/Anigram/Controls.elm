@@ -91,7 +91,7 @@ update msg model =
             control
         _ -> control
 
-    openCloseAt id state =
+    openCloseAt id state model =
       { model | controls = List.map (openClose id state) model.controls }
     openClose id state control =
       case control of
@@ -102,7 +102,7 @@ update msg model =
             control
         _ -> control
 
-    closeAll =
+    closeAll model =
       { model | controls = List.map close model.controls }
     close control =
       case control of
@@ -120,15 +120,15 @@ update msg model =
       AnigramLoaded anigram ->
         (setAnigram anigram model, Cmd.none)
       DeselectAll ->
-        (closeAll, Cmd.none)
+        (closeAll model, Cmd.none)
       Selection (Fill color) ->
         (setColorOf FillSelector color, Cmd.none)
       Selection (Stroke color) ->
         (setColorOf StrokeSelector color, Cmd.none)
       Control (OpenClose id state) ->
-        (openCloseAt id state, Cmd.none)
+        (model |> closeAll |> openCloseAt id state, Cmd.none)
       _ ->
-        (closeAll, Cmd.none)
+        (closeAll model, Cmd.none)
 
 view model =
   nav
