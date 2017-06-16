@@ -19,7 +19,8 @@ import Html.Events exposing (on, onWithOptions, defaultOptions)
 
 onShiftPositionMouseDown : (Bool -> Position -> msg) -> Attribute msg
 onShiftPositionMouseDown msg =
-  on "mousedown"
+  onWithOptions "mousedown"
+    { defaultOptions | preventDefault = True }
     <| Json.map2 msg
       shiftDecode
       positionDecode
@@ -61,8 +62,8 @@ shiftDecode =
 positionDecode : Json.Decoder Position
 positionDecode =
   Json.map2 Position
-    (Json.field "offsetX" Json.int)
-    (Json.field "offsetY" Json.int)
+    (Json.field "clientX" Json.int)
+    (Json.field "clientY" Json.int)
 
 comboKeyDecode : Json.Decoder (Bool, Bool, Key)
 comboKeyDecode =

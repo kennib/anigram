@@ -113,7 +113,10 @@ view model objects =
       ) ++ ";"
     ]
     [ div
-      []
+      [ Html.Attributes.style
+        [ ("position", "absolute")
+        ]
+      ]
       <| List.map (\object -> textEditView model.cursorMode object.state object.style)
       <| objects
     , svg
@@ -344,9 +347,10 @@ unselectedView cursorMode objectId object =
           , flip object
           , onCursor cursorMode objectId
           ]
-          [ Html.pre
+          [ Html.textarea
               [ Html.Attributes.style
                 <| textStyle style
+              , Html.Attributes.readonly True
               ]
               [ text string ]
           ]
@@ -412,6 +416,10 @@ textEditView cursorMode state object =
           [ Html.Attributes.style
             <| (::) ("opacity", if object.hidden then "0.2" else "1")
             <| textStyle style
+          , Html.Attributes.readonly <|
+              case cursorMode of
+                DragMode (Drag _ _) -> True
+                _ -> False
           , autofocus True
           , Html.Attributes.attribute "onfocus" "this.select()" -- This is kind of cheating, but is the least nasty of several options
           , onInput (Selection << SetText)
