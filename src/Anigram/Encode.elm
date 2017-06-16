@@ -78,6 +78,11 @@ encodeChange change =
         [ ("change", Json.string "stroke" )
         , ("color", encodeColor color)
         ]
+    TextColor color ->
+      Json.object
+        [ ("change", Json.string "textColor" )
+        , ("color", encodeColor color)
+        ]
     TextSizeTo size ->
       Json.object
         [ ("change", Json.string "textSize" )

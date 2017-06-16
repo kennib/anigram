@@ -224,6 +224,7 @@ reduceObjectChanges changes =
     ++ getLastChange Change.isSizeTo changes
     ++ getLastChange Change.isFill changes
     ++ getLastChange Change.isStroke changes
+    ++ getLastChange Change.isTextColor changes
     ++ getLastChange Change.isTextSizeTo changes
     ++ List.filter Change.isMove changes
     ++ List.filter Change.isResize changes
@@ -335,6 +336,10 @@ applyChange change style =
     SizeTo size -> { style | width = size.width, height = size.height }
     Fill color -> { style | fill = color }
     Stroke color -> { style | stroke = color }
+    TextColor color ->
+      case style.objectType of
+        Text string textStyle -> { style | objectType = Text string { textStyle | color = color } }
+        _ -> { style | objectType = Text "Add text here" { defaultTextStyle | color = color } }
     TextSizeTo size ->
       case style.objectType of
         Text string textStyle -> { style | objectType = Text string { textStyle | size = size } }

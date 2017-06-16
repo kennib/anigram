@@ -25,8 +25,9 @@ model =
   , buttonControl "Show" Icon.eye <| Selection <| Hide False 
   , buttonControl "Hide" Icon.eye_slash <| Selection <| Hide True
   , buttonControl "Duplicate" Icon.copy Duplicate
-  , colorControl 0 "Fill" Color.green FillSelector
-  , colorControl 1 "Stroke" Color.grey StrokeSelector
+  , colorControl 0 "Fill color" Color.green FillSelector
+  , colorControl 1 "Stroke color" Color.grey StrokeSelector
+  , colorControl 2 "Text color" Color.red TextSelector
   , numberControl "Text Size" Icon.text_height defaultTextStyle.size
   , buttonControl "Add Frame" Icon.plus_square AddFrame
   , buttonControl "Save" Icon.cloud_upload SaveAnigram
@@ -196,6 +197,7 @@ controlView control =
             case control.kind of
               FillSelector -> Selection <| Fill control.color
               StrokeSelector -> Selection <| Stroke control.color
+              TextSelector -> Selection <| TextColor control.color
           , style
             [ ("margin-right", "0px")
             ]
@@ -203,6 +205,7 @@ controlView control =
             [ case control.kind of
               FillSelector -> Icon.dot_circle_o control.color 20
               StrokeSelector -> Icon.circle_o control.color 20
+              TextSelector -> Icon.font control.color 20
             ]
         , button
           [ title control.tooltip
@@ -241,6 +244,7 @@ colorButton control color =
       case control.kind of
         FillSelector -> Selection <| Fill color
         StrokeSelector -> Selection <| Stroke color
+        TextSelector -> Selection <| TextColor color
     ]
     [ Icon.square color 20
     ]

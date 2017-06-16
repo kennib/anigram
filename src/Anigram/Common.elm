@@ -104,6 +104,7 @@ type Control msg
 type ColorSelectorKind
   = FillSelector
   | StrokeSelector
+  | TextSelector
 
 type alias Model =
   { objects : List ObjectState
@@ -173,6 +174,7 @@ type Change
   | SizeTo Size
   | Fill Color
   | Stroke Color
+  | TextColor Color
   | TextSizeTo Int
 
 type ControlMsg
