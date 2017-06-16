@@ -336,19 +336,20 @@ unselectedView cursorMode objectId object =
                 (startVec |> Vec2.add lengthVec)
               ]
       Text string style ->
-        text_
+        foreignObject
           [ x <| toString object.x
           , y <| toString object.y
-          , dx "2"
-          , dy <| toString style.size
+          , width <| toString <| abs <| object.width
+          , height <| toString <| abs <| object.height
           , flip object
-          , fontSize <| toString style.size ++ "px"
-          , fontFamily style.font
-          , fill <| "#" ++ colorToHex style.color
-          , Attr.cursor "text"
           , onCursor cursorMode objectId
           ]
-          [text string]
+          [ Html.pre
+              [ Html.Attributes.style
+                <| textStyle style
+              ]
+              [ text string ]
+          ]
   else
     text ""
 
@@ -409,19 +410,8 @@ textEditView cursorMode state object =
         ]
         [ textarea
           [ Html.Attributes.style
-            [ ("resize", "none")
-            , ("box-sizing", "border-box")
-            , ("width", "100%")
-            , ("height", "100%")
-            , ("margin-top", "0px")
-            , ("line-height", "1.0")
-            , ("font-size", toString style.size++ "px")
-            , ("font-family", style.font)
-            , ("color", "#" ++ colorToHex style.color)
-            , ("border", "none")
-            , ("background", "none")
-            , ("opacity", if object.hidden then "0.2" else "1")
-            ]
+            <| (::) ("opacity", if object.hidden then "0.2" else "1")
+            <| textStyle style
           , autofocus True
           , Html.Attributes.attribute "onfocus" "this.select()" -- This is kind of cheating, but is the least nasty of several options
           , onInput (Selection << SetText)
@@ -433,6 +423,22 @@ textEditView cursorMode state object =
         ]
     _ ->
       text ""
+
+textStyle : TextStyle -> List (String, String)
+textStyle style =
+  [ ("resize", "none")
+  , ("box-sizing", "border-box")
+  , ("width", "100%")
+  , ("height", "100%")
+  , ("margin-top", "0px")
+  , ("padding", "2px")
+  , ("line-height", "1.0")
+  , ("font-size", toString style.size++ "px")
+  , ("font-family", style.font)
+  , ("color", "#" ++ colorToHex style.color)
+  , ("border", "none")
+  , ("background", "none")
+  ]
 
 selectedView : CursorMode -> ObjectId -> Style -> Html Msg
 selectedView cursorMode id object =
