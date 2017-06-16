@@ -158,6 +158,8 @@ update msg model =
         (setAnigram anigram model, Cmd.none)
       DeselectAll ->
         (closeAll model, Cmd.none)
+      Selection (AddStyleSet styleSet) ->
+        (setChoiceOf <| AddStyleSet styleSet, Cmd.none)
       Selection (Fill color) ->
         (setColorOf FillSelector color, Cmd.none)
       Selection (Stroke color) ->

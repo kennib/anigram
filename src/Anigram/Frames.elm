@@ -18,6 +18,7 @@ import Anigram.Object as Objects exposing (defaultTextStyle)
 import Anigram.Change as Change
 import Anigram.Snapping as Snap
 import Anigram.Selection as Selection
+import Anigram.StyleSets as StyleSets
 
 empty : Frame
 empty = Dict.empty
@@ -30,6 +31,16 @@ objectIds frames =
     |> List.unique
 
 setCursorMode mode model = { model | cursorMode = mode }
+
+currentStyleSet model =
+  List.getAt 5 model -- This could be done better, maybe controls should be a record instead of a list
+    |> Maybe.andThen (\control ->
+      case control of
+        ListPicker control ->
+          Just control.choice
+        _ -> Nothing
+    )
+    |> Maybe.withDefault (AddStyleSet StyleSets.default)
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
@@ -103,6 +114,7 @@ update msg model =
           |> addChangeToModelAt 0 (MoveTo position)
           |> addChangeToModelAt 0 (SizeTo { width = 0, height = 0 })
           |> addChangeToModelAt 0 (Hide True) 
+          |> addChangeToModelAt 0 (currentStyleSet model.controls)
           |> addChangeToModelAt model.frameIndex (Hide False)
       , Cmd.none)
     _ ->
