@@ -94,12 +94,12 @@ textSizes =
     [8, 12, 16, 24, 36, 48, 72, 106]
 
 defaultStyleSet =
-  AddStyleSet StyleSets.default
+  AddStyleSet "Default"
 
 styleSets =
   StyleSets.sets
-    |> Dict.toList
-    |> List.map (Tuple.mapSecond AddStyleSet)
+    |> Dict.keys
+    |> List.map (\key -> (key, AddStyleSet key))
 
 update msg model =
   let

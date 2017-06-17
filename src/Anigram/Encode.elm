@@ -35,7 +35,7 @@ encodeChange change =
     AddStyleSet styleSet ->
       Json.object
         [ ( "change", Json.string "addStyleSet" )
-        , ( "styleSet", encodeChanges styleSet )
+        , ( "styleSet", Json.string styleSet )
         ]
     ChangeType objectType ->
       Json.object

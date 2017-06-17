@@ -166,7 +166,7 @@ type Msg
   | NoOp
 
 type Change
-  = AddStyleSet StyleSet
+  = AddStyleSet String
   | ChangeType ObjectType
   | Hide Bool
   | SetText String
@@ -180,6 +180,7 @@ type Change
   | TextSizeTo Int
 
 type alias StyleSet = List Change
+type alias StyleSets = Dict String StyleSet
 
 type ControlMsg
   = OpenClose Int Bool

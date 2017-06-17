@@ -33,7 +33,7 @@ decodeChange =
     case change of
       "addStyleSet" ->
         Json.map (Just << AddStyleSet)
-          (Json.field "styleSet" decodeChanges)
+          (Json.field "styleSet" Json.string)
       "changeType" ->
         Json.map (Just << ChangeType)
           (Json.field "type" decodeObjectType)
