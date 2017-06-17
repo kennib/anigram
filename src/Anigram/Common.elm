@@ -48,6 +48,9 @@ type ObjectType
 type ShapeType
   = Circle
   | Square
+  | Star
+
+type alias Shape = List (Int, Int)
 
 type alias TextStyle =
   { size : Int

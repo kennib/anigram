@@ -24,6 +24,7 @@ import Vector2 as Vec2 exposing (Vec2)
 
 import Anigram.Common exposing (..)
 import Anigram.Selection as Selection
+import Anigram.Shapes as Shapes
 
 defaultStyle : Style
 defaultStyle =
@@ -325,6 +326,23 @@ unselectedView cursorMode objectId object =
           , onCursor cursorMode objectId
           ]
           []
+      Shape Star ->
+        Svg.g
+          [ x <| toString object.x
+          , y <| toString object.y
+          , width <| toString <| abs object.width
+          , height <| toString <| abs object.height
+          , flip object
+          , onCursor cursorMode objectId
+          ]
+          [ Svg.path 
+            [ d <| Shapes.toPath <| Shapes.star object.x object.y object.width object.height 5
+            , fill <| "#" ++ colorToHex object.fill
+            , stroke <| "#" ++ colorToHex object.stroke
+            , strokeWidth <| toString object.strokeWidth
+            ]  
+            []
+          ]
       Arrow ->
         arrowView cursorMode objectId object
           <| \startVec lengthVec ->

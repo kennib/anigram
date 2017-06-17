@@ -26,6 +26,7 @@ import Anigram.Encode as Encode exposing (encodeChange)
 model =
   [ addObjectControl "Add a Circle" Icon.circle <| Shape Circle
   , addObjectControl "Add a Square" Icon.square <| Shape Square
+  , addObjectControl "Add a Star" Icon.star <| Shape Star
   , addObjectControl "Add an Arrow" Icon.long_arrow_right <| Arrow
   , addObjectControl "Add an Arc Arrow" Icon.reply <| ArcArrow 100
   , addObjectControl "Add Text" Icon.file_text <| Text "Add Text here" defaultTextStyle
