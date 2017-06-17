@@ -2,8 +2,6 @@ module Anigram.Selection exposing (..)
 
 import Dict
 
-import CopyPaste
-
 import Anigram.Common exposing (..)
 
 toAnigram : Model ->  Anigram
