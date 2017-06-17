@@ -62,6 +62,12 @@ isStroke change =
     Stroke _ -> True
     _ -> False
 
+isStrokeWidth : Change -> Bool
+isStrokeWidth change =
+  case change of
+    StrokeWidth _ -> True
+    _ -> False
+
 isTextColor : Change -> Bool
 isTextColor change =
   case change of

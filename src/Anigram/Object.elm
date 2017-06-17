@@ -35,6 +35,7 @@ defaultStyle =
   , height = 100
   , fill = Color.lightBlue
   , stroke = Color.black
+  , strokeWidth = 3
   }
 
 defaultTextStyle : TextStyle
@@ -307,6 +308,7 @@ unselectedView cursorMode objectId object =
           , flip object
           , fill <| "#" ++ colorToHex object.fill
           , stroke <| "#" ++ colorToHex object.stroke
+          , strokeWidth <| toString object.strokeWidth
           , onCursor cursorMode objectId
           ]
           []
@@ -319,6 +321,7 @@ unselectedView cursorMode objectId object =
           , flip object
           , fill <| "#" ++ colorToHex object.fill
           , stroke <| "#" ++ colorToHex object.stroke
+          , strokeWidth <| toString object.strokeWidth
           , onCursor cursorMode objectId
           ]
           []
@@ -390,7 +393,7 @@ arrowView cursorMode objectId object path =
         , attribute "marker-end" <| "url(#head-"++toString objectId++")"
         , stroke <| "#" ++ colorToHex object.stroke
         , fill "none"
-        , strokeWidth "3"
+        , strokeWidth <| toString object.strokeWidth
         , onCursor cursorMode objectId
         ]
         [

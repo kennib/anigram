@@ -83,6 +83,11 @@ encodeChange change =
         [ ("change", Json.string "stroke" )
         , ("color", encodeColor color)
         ]
+    StrokeWidth width ->
+      Json.object
+        [ ("change", Json.string "strokeWidth" )
+        , ("width", Json.int width)
+        ]
     TextColor color ->
       Json.object
         [ ("change", Json.string "textColor" )

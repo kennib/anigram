@@ -16,7 +16,7 @@ import ColorMath exposing (colorToHex)
 import FontAwesome as Icon
 
 import Anigram.Common exposing (..)
-import Anigram.Object as Obj exposing (defaultTextStyle)
+import Anigram.Object as Obj exposing (defaultStyle, defaultTextStyle)
 import Anigram.Frames as Frames
 import Anigram.Store as Store
 import Anigram.StyleSets as StyleSets
@@ -35,6 +35,7 @@ model =
   , buttonControl "Duplicate" Icon.copy Duplicate
   , colorControl 0 "Fill color" Color.green FillSelector
   , colorControl 1 "Stroke color" Color.grey StrokeSelector
+  , listControl "Stroke width" Icon.circle_o defaultStrokeWidth strokeWidths
   , colorControl 2 "Text color" Color.red TextSelector
   , listControl "Text size" Icon.text_height defaultTextSize textSizes
   , buttonControl "Add Frame" Icon.plus_square AddFrame
@@ -84,6 +85,14 @@ newColorSelector id tooltip color kind =
   , color = color
   , open = False
   }
+
+defaultStrokeWidth =
+  StrokeWidth <| defaultStyle.strokeWidth
+
+strokeWidths =
+  List.map
+    (\width -> (toString width, StrokeWidth width))
+    [1, 2, 3, 5, 8, 12, 24, 40]
 
 defaultTextSize =
   TextSizeTo defaultTextStyle.size
@@ -216,7 +225,7 @@ controlView control =
               (Maybe.withDefault NoOp << Maybe.map Selection << Maybe.join << Result.toMaybe << Json.decodeString decodeChange)
               (Json.at ["target", "value"] Json.string)
           ]
-          <| List.map (\(label, choice) -> option [ value <| encode 0 <| encodeChange choice, default <| choice == control.choice ] [ text label ])
+          <| List.map (\(label, choice) -> option [ value <| encode 0 <| encodeChange choice, selected <| choice == control.choice ] [ text label ])
           <| control.choices
         ]
     ObjectAdder control ->

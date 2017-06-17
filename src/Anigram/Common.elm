@@ -36,6 +36,7 @@ type alias Style =
   , height : Int
   , fill : Color
   , stroke : Color
+  , strokeWidth : Int
   }
 
 type ObjectType
@@ -176,6 +177,7 @@ type Change
   | SizeTo Size
   | Fill Color
   | Stroke Color
+  | StrokeWidth Int
   | TextColor Color
   | TextSizeTo Int
 

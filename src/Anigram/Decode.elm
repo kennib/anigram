@@ -62,6 +62,9 @@ decodeChange =
       "stroke" ->
         Json.map (Just << Stroke)
           (Json.field "color" decodeColor)
+      "strokeWidth" ->
+        Json.map (Just << StrokeWidth)
+          (Json.field "width" Json.int)
       "textColor" ->
         Json.map (Just << TextColor)
           (Json.field "color" decodeColor)
