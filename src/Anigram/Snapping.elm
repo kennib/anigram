@@ -14,18 +14,18 @@ snapCursor objects snappingObjects mode =
     DragMode dragDrop ->
       DragMode
         <| snapDragDrop objects snappingObjects dragDrop
-    DragResizeMode corner dragResize ->
-      uncurry DragResizeMode
-        <| snapResize objects snappingObjects (corner, dragResize)
+    DragSizeMode initial corner dragResize ->
+      uncurry (DragSizeMode initial)
+        <| snapResize objects snappingObjects initial (corner, dragResize)
     otherMode ->
       otherMode
 
-snapResize : List Object -> List ObjectId -> (Corner, DragDrop) -> (Corner, DragDrop)
-snapResize objects snappingObjects (corner, dragDrop) =
+snapResize : List Object -> List ObjectId -> Bool -> (Corner, DragDrop) -> (Corner, DragDrop)
+snapResize objects snappingObjects initial (corner, dragDrop) =
   let
     otherObjects = List.filterNot (\obj -> List.member obj.id snappingObjects) objects
     selected = List.filter (\obj -> List.member obj.id snappingObjects) objects
-      |> List.map (\object -> Object.setStyle (Object.applyCursorMode <| DragResizeMode corner dragDrop) object)
+      |> List.map (\object -> Object.setStyle (Object.applyCursorMode <| DragSizeMode initial corner dragDrop) object)
     snapped = snap (snapLines <| List.map .style otherObjects) (List.andThen (cornerSnapLines corner) <| List.map .style selected)
   in
     (corner, DragDrop.mapEnd snapped dragDrop)

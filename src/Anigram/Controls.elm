@@ -1,6 +1,7 @@
 module Anigram.Controls exposing (..)
 
 import Dict
+import List.Extra as List
 import Maybe.Extra as Maybe
 
 import DragDrop
@@ -33,6 +34,7 @@ model =
   , addObjectControl "Add an Arc Arrow" Icon.reply <| ArcArrow 100
   , addObjectControl "Add Text" Icon.file_text <| Text "Add Text here" defaultTextStyle
   , listControl "Style Sets" Icon.paint_brush defaultStyleSet styleSets
+  , buttonControl "Modify style set" Icon.edit ModifyStyleSet
   , buttonControl "Show" Icon.eye <| Selection <| Hide False 
   , buttonControl "Hide" Icon.eye_slash <| Selection <| Hide True
   , buttonControl "Duplicate" Icon.copy Duplicate
@@ -113,6 +115,18 @@ styleSets =
     |> Dict.keys
     |> List.map (\key -> (key, AddStyleSet key))
 
+currentStyleSet model =
+  List.getAt 6 model -- This could be done better, maybe controls should be a record instead of a list
+    |> Maybe.andThen (\control ->
+      case control of
+        ListPicker control ->
+          case control.choice of
+            AddStyleSet styleSet -> Just styleSet
+            _ -> Nothing
+        _ -> Nothing
+    )
+
+update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   let
     updateCursor new old =
@@ -121,13 +135,49 @@ update msg model =
         (DragMode (DragDrop.StartDrag _), _) -> new
         (DragMode (DragDrop.Drag _ _), DragMode _) -> new
         (DragMode _, _) -> old
-        (DragResizeMode _ (DragDrop.StartDrag _), _) -> new
-        (DragResizeMode _ (DragDrop.Drag _ _), DragResizeMode _ _) -> new
-        (DragResizeMode _ _, _) -> old
+        (DragSizeMode _ _ (DragDrop.StartDrag _), _) -> new
+        (DragSizeMode _ _ (DragDrop.Drag _ _), DragSizeMode _ _ _) -> new
+        (DragSizeMode _ _ _, _) -> old
         _ -> new
 
     setAnigram anigram model =
-      { model | objects = Frames.objectIds anigram.frames |> List.map Obj.newState, frames = anigram.frames }
+      { model | objects = Frames.objectIds anigram.frames |> List.map Obj.newState, frames = anigram.frames, styleSets = anigram.styleSets }
+
+    modifyStyleSet model =
+      let
+        name = currentStyleSet model.controls
+        getChanges ids frame = List.concat <| List.filterMap (\id -> Dict.get id frame) ids
+        changesAt index frames ids = List.getAt index frames |> Maybe.map (getChanges ids)
+        expandStyleSet changes =
+          case name of
+            Just name ->
+              List.remove (AddStyleSet name) changes
+              |> (++) (Maybe.withDefault [] <| Dict.get name model.styleSets)
+            Nothing -> changes
+        newStyleSet =
+          model.objects
+          |> Obj.selectedIds
+          |> changesAt model.frameIndex model.frames
+          |> Maybe.withDefault []
+          |> expandStyleSet
+        styleSets =
+          case name of
+            Just name -> Dict.insert name newStyleSet model.styleSets
+            Nothing -> model.styleSets
+        setChanges ids frame =
+          case name of
+            Just name ->
+              List.foldl (flip Dict.insert [AddStyleSet name]) frame ids
+            Nothing ->
+              frame
+        deduplicateStyleSet frames =
+          List.updateAt model.frameIndex (setChanges <| Obj.selectedIds model.objects) frames
+            |> Maybe.withDefault frames
+      in
+        { model
+        | styleSets = styleSets
+        , frames = deduplicateStyleSet model.frames
+        }
 
     setChoiceOf choice =
       { model | controls = List.map (setChoice choice) model.controls }
@@ -174,13 +224,15 @@ update msg model =
       SetCursor mode ->
         ({ model | cursorMode = updateCursor mode model.cursorMode }, Cmd.none)
       SaveAnigram ->
-        (model, Store.saveAnigram { frames = model.frames })
+        (model, Store.saveAnigram { frames = model.frames, styleSets = model.styleSets })
       LoadAnigram ->
         (model, Store.loadAnigram)
       AnigramLoaded anigram ->
         (setAnigram anigram model, Cmd.none)
       DeselectAll ->
         (closeAll model, Cmd.none)
+      ModifyStyleSet ->
+        (modifyStyleSet model, Cmd.none)
       Selection (AddStyleSet styleSet) ->
         (setChoiceOf <| AddStyleSet styleSet, Cmd.none)
       Selection (Fill color) ->
@@ -189,6 +241,20 @@ update msg model =
         (setColorOf StrokeSelector color, Cmd.none)
       Control (OpenClose id state) ->
         (model |> closeAll |> openCloseAt id state, Cmd.none)
+      PlaceObject objectType position ->
+        ( { model
+          | objects = model.objects ++
+              [ (Obj.newState <| List.length model.objects)
+              ]
+          , cursorMode = DragSizeMode True (Right, Bottom) <| DragDrop.StartDrag position
+          }
+            |> Frames.addChangeToModelAt 0 (ChangeType objectType)
+            |> Frames.addChangeToModelAt 0 (MoveTo position)
+            |> Frames.addChangeToModelAt 0 (SizeTo { width = 0, height = 0 })
+            |> Frames.addChangeToModelAt 0 (Hide True)
+            |> Frames.addChangeToModelAt 0 (AddStyleSet <| Maybe.withDefault "Default" <| currentStyleSet model.controls)
+            |> Frames.addChangeToModelAt model.frameIndex (Hide False)
+        , Cmd.none)
       _ ->
         (closeAll model, Cmd.none)
 

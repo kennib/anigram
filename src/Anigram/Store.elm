@@ -6,6 +6,7 @@ import Kinto
 
 import Anigram.Common exposing (..)
 import Anigram.Frames
+import Anigram.StyleSets
 import Anigram.Encode exposing (encodeAnigram)
 import Anigram.Decode exposing (decodeAnigram)
 
@@ -35,7 +36,7 @@ loadAnigram =
 anigramResult : Result Kinto.Error (Kinto.Pager Anigram) -> Anigram
 anigramResult result =
   let
-    default = { frames = [Anigram.Frames.empty] }
+    default = { frames = [Anigram.Frames.empty], styleSets = Anigram.StyleSets.sets }
   in
     result
       |> Result.map .objects

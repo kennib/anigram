@@ -5,6 +5,7 @@ import Dict exposing (Dict)
 import Color
 
 import Anigram.Common exposing (..)
+import Anigram.Object exposing (defaultStyle)
 
 sets : StyleSets
 sets =
@@ -14,7 +15,11 @@ sets =
   ]
 
 default : StyleSet
-default = []
+default =
+  [ Fill defaultStyle.fill
+  , Stroke defaultStyle.stroke
+  , StrokeWidth defaultStyle.strokeWidth
+  ]
 
 highlighted : StyleSet
 highlighted =

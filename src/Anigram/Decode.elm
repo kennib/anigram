@@ -13,13 +13,18 @@ import Anigram.Common exposing (..)
 
 decodeAnigram : Json.Decoder Anigram
 decodeAnigram =
-  Json.map Anigram
+  Json.map2 Anigram
     (Json.field "frames" <| Json.list decodeFrame)
+    (Json.field "styleSets" decodeStyleSets)
 
 decodeFrame : Json.Decoder Frame
 decodeFrame =
   Json.dict decodeChanges
     |> Json.map (Dict.mapKeys (String.toInt >> Result.withDefault -1))
+
+decodeStyleSets : Json.Decoder StyleSets
+decodeStyleSets =
+  Json.dict decodeChanges
 
 decodeChanges : Json.Decoder (List Change)
 decodeChanges =
@@ -103,6 +108,7 @@ decodeShape =
     case shape of
       "Square" -> Json.succeed Square
       "Circle" -> Json.succeed Circle
+      "Star" -> Json.succeed Star
       otherShape -> Json.fail <| otherShape ++ " is not a valid shape"
   )
 

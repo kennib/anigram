@@ -15,34 +15,38 @@ update msg model =
       (push model, Cmd.none)
     DeleteFrame ->
       (push model, Cmd.none)
+    ModifyStyleSet ->
+      (push model, Cmd.none)
     _ ->
       (model, Cmd.none)
 
 undo : Model -> Model
 undo model =
   case List.head model.history.past of
-    Just (frames, objects) ->
+    Just (frames, objects, styleSets) ->
       { model
       | history =
         model.history
           |> mapPast (List.drop 1)
-          |> mapFuture ((::) (model.frames, model.objects))
+          |> mapFuture ((::) (model.frames, model.objects, model.styleSets))
       , frames = frames
       , objects = objects
+      , styleSets = styleSets
       }
     Nothing -> model
 
 redo : Model -> Model
 redo model =
   case List.head model.history.future of
-    Just (frames, objects) ->
+    Just (frames, objects, styleSets) ->
       { model
       | history =
         model.history
-          |> mapPast ((::) (model.frames, model.objects))
+          |> mapPast ((::) (model.frames, model.objects, model.styleSets))
           |> mapFuture (List.drop 1)
       , frames = frames
       , objects = objects
+      , styleSets = styleSets
       }
     Nothing -> model
 
@@ -51,7 +55,7 @@ push model =
   { model
   | history =
     model.history
-      |> mapPast ((::) (model.frames, model.objects))
+      |> mapPast ((::) (model.frames, model.objects, model.styleSets))
       |> mapFuture (\_ -> [])
   }
 

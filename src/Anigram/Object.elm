@@ -28,7 +28,7 @@ import Anigram.Shapes as Shapes
 
 defaultStyle : Style
 defaultStyle =
-  { objectType = Shape Circle
+  { objectType = Placeholder
   , hidden = False
   , x = 50
   , y = 50
@@ -104,7 +104,7 @@ view model objects =
     [ Attr.style <| "height: 100vh; flex-grow: 1; cursor: "
       ++ (case model.cursorMode of
         DragMode _ -> "move"
-        DragResizeMode corner _ ->
+        DragSizeMode _ corner _ ->
           case corner of
             (Left , Top   ) -> "nw-resize"
             (Left , Bottom) -> "sw-resize"
@@ -233,7 +233,7 @@ applyCursorMode : CursorMode -> Style -> Style
 applyCursorMode mode =
   case mode of
     DragMode dragDrop -> drop dragDrop
-    DragResizeMode corner dragResize -> resizeDrop corner dragResize
+    DragSizeMode _ corner dragResize -> resizeDrop corner dragResize
     _ -> identity
 
 applyCursor : CursorMode -> List Object -> List Object
@@ -300,6 +300,7 @@ unselectedView : CursorMode -> ObjectId -> Style -> Html Msg
 unselectedView cursorMode objectId object =
   if not object.hidden then
     case object.objectType of
+      Placeholder -> text ""
       Shape Circle ->
         ellipse
           [ cx <| toString (object.x + (abs <| object.width//2))
@@ -476,7 +477,7 @@ selectedView cursorMode id object =
       circle
         [ cx <| toString pos.x, cy <| toString pos.y, r "6"
         , fill "white", stroke "black"
-        , onPositionMouseDown <| if cursorMode == SelectMode then SetCursor << DragResizeMode corner << StartDrag else \_ -> NoOp
+        , onPositionMouseDown <| if cursorMode == SelectMode then SetCursor << DragSizeMode False corner << StartDrag else \_ -> NoOp
         ] []
     cornersSvg =
       List.map (\(corner, pos) -> cornerSvg corner pos) (corners object)

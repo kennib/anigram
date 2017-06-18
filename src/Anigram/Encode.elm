@@ -14,6 +14,7 @@ encodeAnigram : Anigram -> Json.Value
 encodeAnigram anigram =
   Json.object
     [ ( "frames", Json.list <| List.map encodeFrame anigram.frames )
+    , ( "styleSets", encodeStyleSets anigram.styleSets )
     ]
 
 encodeFrame : Frame -> Json.Value
@@ -23,6 +24,13 @@ encodeFrame frame =
     <| Dict.mapKeys toString
     <| Dict.map (\id changes -> encodeChanges changes)
     <| frame
+
+encodeStyleSets : StyleSets -> Json.Value
+encodeStyleSets styleSets =
+  Json.object
+    <| Dict.toList
+    <| Dict.map (\name changes -> encodeChanges changes)
+    <| styleSets
 
 encodeChanges : List Change -> Json.Value
 encodeChanges changes =
@@ -103,6 +111,9 @@ encodeObjectType : ObjectType -> Json.Value
 encodeObjectType objectType =
   Json.object <|
     case objectType of
+      Placeholder ->
+        [ ( "type", Json.string "placeholder" )
+        ]
       Shape shape ->
         [ ( "type", Json.string "shape" )
         , ( "shape", Json.string <| toString shape)

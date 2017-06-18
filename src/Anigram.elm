@@ -18,6 +18,7 @@ import Anigram.Frames as Frames
 import Anigram.Controls as Ctrls
 import Anigram.Snapping as Snap
 import Anigram.History as History
+import Anigram.StyleSets as StyleSets
 
 main =
   program
@@ -30,8 +31,9 @@ main =
 model : Model
 model =
   { objects = []
-  , frames = [ Frames.empty ]
-  , frameIndex = 0
+  , styleSets = StyleSets.sets
+  , frames = [ Frames.empty, Frames.empty ]
+  , frameIndex = 1
   , controls = Ctrls.model
   , focus = ObjectArea
   , cursorMode = SelectMode
@@ -61,11 +63,11 @@ subscriptions model =
   let
     snap =
       Snap.snapDragDrop
-        (Frames.getFrameObjectsWithoutState model.frameIndex model.frames model.objects |> Maybe.withDefault [])
+        (Frames.getFrameObjectsWithoutState model.frameIndex model.styleSets model.frames model.objects |> Maybe.withDefault [])
         (Objects.selectedIds model.objects)
     snapResize =
       Snap.snapResize
-        (Frames.getFrameObjectsWithoutState model.frameIndex model.frames model.objects |> Maybe.withDefault [])
+        (Frames.getFrameObjectsWithoutState model.frameIndex model.styleSets model.frames model.objects |> Maybe.withDefault [])
         (Objects.selectedIds model.objects)
   in
     case model.cursorMode of
@@ -81,10 +83,10 @@ subscriptions model =
           [ Mouse.moves <| \pos -> SetCursor <| DragMode <| DragDrop.drag dragDrop pos
           , Mouse.ups <| \pos -> DragDrop <| dragDrop
           ]
-      DragResizeMode corner dragResize ->
+      DragSizeMode initial corner dragResize ->
         Sub.batch
-          [ Mouse.moves <| \pos -> SetCursor <| DragResizeMode corner <| DragDrop.drag dragResize pos
-          , Mouse.ups <| \pos -> DragResize corner dragResize
+          [ Mouse.moves <| \pos -> SetCursor <| DragSizeMode initial corner <| DragDrop.drag dragResize pos
+          , Mouse.ups <| \pos -> DragSize initial corner dragResize
           ]
       PlaceObjectMode _ ->
         Sub.none
@@ -142,6 +144,6 @@ anigramView model =
     ]
     [ Objects.view model
       <| Maybe.withDefault []
-      <| Frames.getFrameObjects model.frameIndex model.frames model.cursorMode model.objects
+      <| Frames.getFrameObjects model.frameIndex model.styleSets model.frames model.cursorMode model.objects
     , Frames.view model
     ]

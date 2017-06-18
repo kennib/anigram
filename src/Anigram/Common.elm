@@ -40,7 +40,8 @@ type alias Style =
   }
 
 type ObjectType
-  = Shape ShapeType
+  = Placeholder
+  | Shape ShapeType
   | Text String TextStyle
   | Arrow
   | ArcArrow Float
@@ -113,16 +114,18 @@ type ColorSelectorKind
 
 type alias Model =
   { objects : List ObjectState
+  , styleSets : StyleSets
   , frames : List Frame
   , frameIndex : Int
   , controls : List (Control Msg)
   , focus : Focus
   , cursorMode : CursorMode
-  , history : History (List Frame, List ObjectState)
+  , history : History (List Frame, List ObjectState, StyleSets)
   }
 
 type alias Anigram =
   { frames : List Frame
+  , styleSets : StyleSets
   }
 
 type Focus
@@ -133,7 +136,7 @@ type  CursorMode
   = SelectMode
   | DragSelectMode DragDrop.DragDrop
   | DragMode DragDrop.DragDrop
-  | DragResizeMode Corner DragDrop.DragDrop
+  | DragSizeMode Bool Corner DragDrop.DragDrop
   | PlaceObjectMode ObjectType
 
 type alias History a =
@@ -152,7 +155,8 @@ type Msg
   | DragSelect Position Position
   | SelectDragDrop ObjectId DragDrop.DragDrop
   | DragDrop DragDrop.DragDrop
-  | DragResize Corner DragDrop.DragDrop
+  | DragSize Bool Corner DragDrop.DragDrop
+  | ModifyStyleSet
   | Duplicate
   | Undo
   | Redo

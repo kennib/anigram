@@ -12,7 +12,7 @@ toAnigram model =
       model.frames
         |> List.map (Dict.filter (\id changes -> List.member id selection))
   in
-    { frames = frames }
+    { frames = frames, styleSets = model.styleSets }
 
 selection = List.filter (.state >> .selected)
 ids = selection >> List.map .id
