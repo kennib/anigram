@@ -22,6 +22,7 @@ import Anigram.Common exposing (..)
 import Anigram.Object as Obj exposing (defaultStyle, defaultTextStyle)
 import Anigram.Frames as Frames
 import Anigram.Store as Store
+import Anigram.Change as Change
 import Anigram.StyleSets as StyleSets
 import Anigram.Decode as Decode exposing (decodeChange)
 import Anigram.Encode as Encode exposing (encodeChange)
@@ -145,27 +146,26 @@ update msg model =
 
     modifyStyleSet model =
       let
-        name = currentStyleSet model.controls
-        getChanges ids frame = List.concat <| List.filterMap (\id -> Dict.get id frame) ids
-        changesAt index frames ids = List.getAt index frames |> Maybe.map (getChanges ids)
+        styleSet =
+          case selectionStyleSet model of
+            Just "" -> Nothing
+            styleSet -> styleSet
         expandStyleSet changes =
-          case name of
+          case styleSet of
             Just name ->
               List.remove (AddStyleSet name) changes
               |> (++) (Maybe.withDefault [] <| Dict.get name model.styleSets)
             Nothing -> changes
         newStyleSet =
-          model.objects
-          |> Obj.selectedIds
-          |> changesAt model.frameIndex model.frames
+          currentChanges model
           |> Maybe.withDefault []
           |> expandStyleSet
         styleSets =
-          case name of
+          case styleSet of
             Just name -> Dict.insert name newStyleSet model.styleSets
             Nothing -> model.styleSets
         setChanges ids frame =
-          case name of
+          case styleSet of
             Just name ->
               List.foldl (flip Dict.insert [AddStyleSet name]) frame ids
             Nothing ->
@@ -252,11 +252,30 @@ update msg model =
             |> Frames.addChangeToModelAt 0 (MoveTo position)
             |> Frames.addChangeToModelAt 0 (SizeTo { width = 0, height = 0 })
             |> Frames.addChangeToModelAt 0 (Hide True)
-            |> Frames.addChangeToModelAt 0 (AddStyleSet <| Maybe.withDefault "Default" <| currentStyleSet model.controls)
+            |> Frames.addChangeToModelAt model.frameIndex (AddStyleSet <| Maybe.withDefault "Default" <| currentStyleSet model.controls)
             |> Frames.addChangeToModelAt model.frameIndex (Hide False)
         , Cmd.none)
       _ ->
         (closeAll model, Cmd.none)
+
+currentChanges model =
+  let
+    getChanges ids frame = List.concat <| List.filterMap (\id -> Dict.get id frame) ids
+    changesAt index frames ids = List.getAt index frames |> Maybe.map (getChanges ids)
+  in
+    model.objects
+    |> Obj.selectedIds
+    |> (\ids -> if ids == [] then Nothing else Just ids)
+    |> Maybe.andThen (changesAt model.frameIndex model.frames)
+
+selectionStyleSet model =
+  currentChanges model
+    |> Maybe.andThen (List.find Change.isAddStyleSet)
+    |> Maybe.andThen (\change ->
+      case change of
+        AddStyleSet styleSet -> Just styleSet
+        _ -> Nothing
+    )
 
 view model =
   nav
@@ -266,9 +285,9 @@ view model =
       , ("background-color", "#333")
       ]
     ]
-    <| List.map controlView model.controls
+    <| List.map (controlView model) model.controls
 
-controlView control =
+controlView model control =
   case control of
     Button control ->
       button
@@ -305,7 +324,15 @@ controlView control =
               (Maybe.withDefault NoOp << Maybe.map Selection << Maybe.join << Result.toMaybe << Json.decodeString decodeChange)
               (Json.at ["target", "value"] Json.string)
           ]
-          <| List.map (\(label, choice) -> option [ value <| encode 0 <| encodeChange choice, selected <| choice == control.choice ] [ text label ])
+          <| List.map (\(label, choice) ->
+            option
+              [ value <| encode 0 <| encodeChange choice
+              , case currentChanges model of
+                  Just changes -> selected <| List.member choice changes
+                  Nothing -> selected <| choice == (AddStyleSet <| Maybe.withDefault "" <| currentStyleSet model.controls)
+              ]
+              [ text label ]
+          )
           <| control.choices
         ]
     ObjectAdder control ->

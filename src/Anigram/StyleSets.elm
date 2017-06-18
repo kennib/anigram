@@ -10,9 +10,13 @@ import Anigram.Object exposing (defaultStyle)
 sets : StyleSets
 sets =
   Dict.fromList
-  [ ("Default", default) 
+  [ ("", none)
+  , ("Default", default)
   , ("Highlighted", highlighted)
   ]
+
+none : StyleSet
+none = []
 
 default : StyleSet
 default =
