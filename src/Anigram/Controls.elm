@@ -3,6 +3,8 @@ module Anigram.Controls exposing (..)
 import Dict
 import Maybe.Extra as Maybe
 
+import DragDrop
+
 import Json.Decode as Json
 import Json.Encode exposing (encode)
 
@@ -113,6 +115,17 @@ styleSets =
 
 update msg model =
   let
+    updateCursor new old =
+      -- Dragging may only be continued if dragging has already started
+      case (new, old) of
+        (DragMode (DragDrop.StartDrag _), _) -> new
+        (DragMode (DragDrop.Drag _ _), DragMode _) -> new
+        (DragMode _, _) -> old
+        (DragResizeMode _ (DragDrop.StartDrag _), _) -> new
+        (DragResizeMode _ (DragDrop.Drag _ _), DragResizeMode _ _) -> new
+        (DragResizeMode _ _, _) -> old
+        _ -> new
+
     setAnigram anigram model =
       { model | objects = Frames.objectIds anigram.frames |> List.map Obj.newState, frames = anigram.frames }
 
@@ -159,7 +172,7 @@ update msg model =
   in
     case msg of
       SetCursor mode ->
-        ({ model | cursorMode = mode }, Cmd.none)
+        ({ model | cursorMode = updateCursor mode model.cursorMode }, Cmd.none)
       SaveAnigram ->
         (model, Store.saveAnigram { frames = model.frames })
       LoadAnigram ->
