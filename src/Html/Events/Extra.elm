@@ -51,7 +51,7 @@ onPositionMouseMove msg =
 
 onComboKeyDown : ((Bool, Bool, Key) -> msg) -> Attribute msg
 onComboKeyDown msg =
-  onWithOptions "keydown" { defaultOptions | preventDefault = True }
+  onWithOptions "keydown" { defaultOptions | preventDefault = False }
     <| Json.map msg
     <| comboKeyDecode
 

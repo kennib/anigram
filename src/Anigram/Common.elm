@@ -106,6 +106,11 @@ type Control msg
     , color : Color
     , open : Bool
     }
+  | StyleSetInput
+    { tooltip : String
+    , icon : Html msg
+    , input : String
+    }
 
 type ColorSelectorKind
   = FillSelector
@@ -157,6 +162,8 @@ type Msg
   | DragDrop DragDrop.DragDrop
   | DragSize Bool Corner DragDrop.DragDrop
   | ModifyStyleSet
+  | NewStyleSet String
+  | UpdateStyleSetInput String
   | Duplicate
   | Undo
   | Redo

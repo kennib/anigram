@@ -34,8 +34,9 @@ model =
   , addObjectControl "Add an Arrow" Icon.long_arrow_right <| Arrow
   , addObjectControl "Add an Arc Arrow" Icon.reply <| ArcArrow 100
   , addObjectControl "Add Text" Icon.file_text <| Text "Add Text here" defaultTextStyle
-  , listControl "Style Sets" Icon.paint_brush defaultStyleSet styleSets
+  , listControl "Style Sets" Icon.paint_brush defaultStyleSet <| styleSets StyleSets.sets
   , buttonControl "Modify style set" Icon.edit ModifyStyleSet
+  , inputControl "Add style set" Icon.plus_square
   , buttonControl "Show" Icon.eye <| Selection <| Hide False 
   , buttonControl "Hide" Icon.eye_slash <| Selection <| Hide True
   , buttonControl "Duplicate" Icon.copy Duplicate
@@ -60,6 +61,9 @@ addObjectControl tooltip icon object =
 
 colorControl id tooltip color kind =
   newColorSelector id tooltip color kind
+
+inputControl tooltip icon =
+  newStyleSetInput tooltip (icon Color.black 20)
 
 newButton tooltip icon message =
   Button
@@ -92,6 +96,13 @@ newColorSelector id tooltip color kind =
   , open = False
   }
 
+newStyleSetInput tooltip icon =
+  StyleSetInput
+  { tooltip = tooltip
+  , icon = icon
+  , input = ""
+  }
+
 defaultStrokeWidth =
   StrokeWidth <| defaultStyle.strokeWidth
 
@@ -111,8 +122,8 @@ textSizes =
 defaultStyleSet =
   AddStyleSet "Default"
 
-styleSets =
-  StyleSets.sets
+styleSets sets =
+  sets
     |> Dict.keys
     |> List.map (\key -> (key, AddStyleSet key))
 
@@ -144,40 +155,63 @@ update msg model =
     setAnigram anigram model =
       { model | objects = Frames.objectIds anigram.frames |> List.map Obj.newState, frames = anigram.frames, styleSets = anigram.styleSets }
 
+    styleSet =
+      case selectionStyleSet model of
+        Just "" -> Nothing
+        styleSet -> styleSet
+    expandStyleSet changes =
+      case styleSet of
+        Just name ->
+          List.remove (AddStyleSet name) changes
+          |> (++) (Maybe.withDefault [] <| Dict.get name model.styleSets)
+        Nothing -> changes
+    newStyleSet =
+      currentChanges model
+      |> Maybe.withDefault []
+      |> expandStyleSet
+    insertStyleSet styleSet =
+      case styleSet of
+        Just name -> Dict.insert name newStyleSet model.styleSets
+        Nothing -> model.styleSets
+    setChanges styleSet ids frame =
+      case styleSet of
+        Just name ->
+          List.foldl (flip Dict.insert [AddStyleSet name]) frame ids
+        Nothing ->
+          frame
+    deduplicateStyleSet styleSet frames =
+      List.updateAt model.frameIndex (setChanges styleSet <| Obj.selectedIds model.objects) frames
+        |> Maybe.withDefault frames
     modifyStyleSet model =
-      let
-        styleSet =
-          case selectionStyleSet model of
-            Just "" -> Nothing
-            styleSet -> styleSet
-        expandStyleSet changes =
-          case styleSet of
-            Just name ->
-              List.remove (AddStyleSet name) changes
-              |> (++) (Maybe.withDefault [] <| Dict.get name model.styleSets)
-            Nothing -> changes
-        newStyleSet =
-          currentChanges model
-          |> Maybe.withDefault []
-          |> expandStyleSet
-        styleSets =
-          case styleSet of
-            Just name -> Dict.insert name newStyleSet model.styleSets
-            Nothing -> model.styleSets
-        setChanges ids frame =
-          case styleSet of
-            Just name ->
-              List.foldl (flip Dict.insert [AddStyleSet name]) frame ids
-            Nothing ->
-              frame
-        deduplicateStyleSet frames =
-          List.updateAt model.frameIndex (setChanges <| Obj.selectedIds model.objects) frames
-            |> Maybe.withDefault frames
-      in
         { model
-        | styleSets = styleSets
-        , frames = deduplicateStyleSet model.frames
+        | styleSets = insertStyleSet styleSet
+        , frames = deduplicateStyleSet styleSet model.frames
         }
+    addStyleSet name model =
+      { model
+      | styleSets = insertStyleSet <| Just name
+      , frames = deduplicateStyleSet (Just name) model.frames
+      }
+      |> updateStyleSetControls name
+    updateStyleSetControls styleSet model =
+      { model | controls = List.map (updateStyleSetPicker styleSet model.styleSets) model.controls }
+    updateStyleSetPicker choice choices control =
+      case control of
+        ListPicker control ->
+          case control.choice of
+            AddStyleSet _ ->
+              ListPicker { control | choices = styleSets choices, choice = AddStyleSet choice }
+            _ ->
+              ListPicker control
+        control -> control
+
+    updateStyleSetInput input model =
+      { model | controls = List.map (updateStyleSetControl input) model.controls }
+    updateStyleSetControl input control =
+      case control of
+        StyleSetInput control ->
+          StyleSetInput { control | input = input }
+        control -> control
 
     setChoiceOf choice =
       { model | controls = List.map (setChoice choice) model.controls }
@@ -233,6 +267,10 @@ update msg model =
         (closeAll model, Cmd.none)
       ModifyStyleSet ->
         (modifyStyleSet model, Cmd.none)
+      NewStyleSet name ->
+        (addStyleSet name model, Cmd.none)
+      UpdateStyleSetInput input ->
+        (updateStyleSetInput input model, Cmd.none)
       Selection (AddStyleSet styleSet) ->
         (setChoiceOf <| AddStyleSet styleSet, Cmd.none)
       Selection (Fill color) ->
@@ -389,6 +427,26 @@ controlView model control =
               <| List.map (colorButton control) colors
           else
             text ""
+        ]
+    StyleSetInput control ->
+      span
+        [ title control.tooltip
+        ]
+        [ button
+          [ onClick <| NewStyleSet control.input ]
+          [ control.icon ]
+        , input
+          [ style
+            [ ("width", "auto")
+            , ("margin", "4px")
+            , ("margin-top", "0px")
+            , ("vertical-align", "bottom")
+            , ("font-size", "14px")
+            ]
+          , placeholder "Styleset name"
+          , onInput UpdateStyleSetInput
+          ]
+          []
         ]
 
 colorButton control color =
