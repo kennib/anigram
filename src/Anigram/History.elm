@@ -19,6 +19,8 @@ update msg model =
       (push model, Cmd.none)
     NewStyleSet _ ->
       (push model, Cmd.none)
+    AnigramLoaded _ ->
+      (push model, Cmd.none)
     _ ->
       (model, Cmd.none)
 

@@ -1,0 +1,12 @@
+<div id="Anigram"></div>
+<script src="Anigram.js"></script>
+<script>
+  var app = Elm.Anigram.fullscreen();
+
+  app.ports.storeLocal.subscribe(function(anigram) {
+    localStorage.setItem('anigram', JSON.stringify(anigram));
+  });
+
+  anigram = JSON.parse(localStorage.getItem('anigram'));
+  app.ports.loadLocal.send(anigram);
+</script>

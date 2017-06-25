@@ -1,8 +1,11 @@
-module Anigram.Store exposing (..)
+port module Anigram.Store exposing (..)
 
 import Result
 
 import Kinto
+
+import Json.Encode
+import Json.Decode
 
 import Anigram.Common exposing (..)
 import Anigram.Frames
@@ -35,10 +38,20 @@ loadAnigram =
 
 anigramResult : Result Kinto.Error (Kinto.Pager Anigram) -> Anigram
 anigramResult result =
-  let
-    default = { frames = [Anigram.Frames.empty], styleSets = Anigram.StyleSets.sets }
-  in
-    result
-      |> Result.map .objects
-      |> Result.map (List.head >> Maybe.withDefault default)
-      |> Result.withDefault default
+  result
+    |> Result.map .objects
+    |> Result.map (List.head >> Maybe.withDefault defaultAnigram)
+    |> Result.withDefault defaultAnigram
+
+defaultAnigram : Anigram
+defaultAnigram = { frames = [Anigram.Frames.empty, Anigram.Frames.empty], styleSets = Anigram.StyleSets.sets }
+
+port storeLocal : Json.Encode.Value -> Cmd msg
+storeLocalAnigram : Anigram -> Cmd Msg
+storeLocalAnigram anigram =
+  storeLocal <| encodeAnigram anigram
+
+port loadLocal : (Json.Encode.Value -> msg) -> Sub msg
+loadLocalAnigram : Sub Msg
+loadLocalAnigram =
+  loadLocal (AnigramLoaded << Result.withDefault defaultAnigram << Json.Decode.decodeValue decodeAnigram)
